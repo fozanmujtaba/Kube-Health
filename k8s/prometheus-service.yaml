@@ -1,0 +1,42 @@
+# =============================================================================
+# prometheus-service.yaml — NodePort Service for Prometheus
+# =============================================================================
+# Exposes Prometheus outside the cluster via NodePort so that:
+#   1. The Dashboard Backend (running on localhost or in-cluster) can
+#      query the Prometheus HTTP API for metrics
+#   2. You can access the Prometheus Web UI directly for debugging
+#
+# NodePort is chosen over ClusterIP because Prometheus needs to be
+# reachable from the dashboard backend which may run outside the cluster
+# during development.
+#
+# Access:
+#   - Inside cluster  : prometheus-service.kube-health.svc.cluster.local:9090
+#   - Outside cluster : <minikube-ip>:<nodePort>  (or via kubectl port-forward)
+#   - Port-forward    : kubectl port-forward -n kube-health svc/prometheus-service 9090:9090
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: monitoring
+    tier: prometheus
+spec:
+  # NodePort: allocates a port on every cluster node (30000-32767 range)
+  # making the service accessible from outside the cluster network.
+  type: NodePort
+
+  selector:
+    app: kube-health
+    component: prometheus
+
+  ports:
+    - name: web
+      protocol: TCP
+      port: 9090          # Service port (cluster-internal)
+      targetPort: 9090    # Container port on the Prometheus pod
+      nodePort: 30090     # Fixed NodePort for consistent access
+                          # Access via: <minikube-ip>:30090

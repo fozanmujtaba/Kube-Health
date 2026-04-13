@@ -1,0 +1,122 @@
+# =============================================================================
+# prometheus-deployment.yaml — Prometheus time-series database & scraper
+# =============================================================================
+# Prometheus is the metrics backbone of the entire KUBE-HEALTH system.
+# It periodically scrapes targets (postgres-exporter, load-simulator),
+# stores time-series data, and exposes an HTTP API that both the HPA
+# (via Prometheus Adapter) and the Dashboard Backend query.
+#
+# Data flow:
+#   postgres-exporter → [scraped by] → Prometheus → [queried by] → HPA / Dashboard
+#
+# Storage: Uses emptyDir (data lost on pod restart). For production,
+# use a PVC with at least 10Gi. Demo retention is set to 2 hours.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: monitoring
+    tier: prometheus
+spec:
+  # Single replica — Prometheus is a stateful component. For HA setups
+  # you'd use Thanos or Prometheus Operator, but for a demo one is fine.
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: kube-health
+      component: prometheus
+
+  template:
+    metadata:
+      labels:
+        app: kube-health
+        component: prometheus
+    spec:
+      # Prometheus needs to read configmaps — in some clusters you may
+      # need a ServiceAccount with RBAC. For minikube demos this works
+      # with the default ServiceAccount.
+      serviceAccountName: default
+
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.45.0
+          imagePullPolicy: IfNotPresent
+
+          # -----------------------------------------------------------------
+          # Command-line flags for Prometheus
+          # -----------------------------------------------------------------
+          args:
+            # Path to the config file inside the container
+            - "--config.file=/etc/prometheus/prometheus.yml"
+
+            # Where to store scraped data on disk
+            - "--storage.tsdb.path=/prometheus/data"
+
+            # How long to keep data. 2h is sufficient for the demo's
+            # 10-minute chart window, keeps disk usage minimal.
+            - "--storage.tsdb.retention.time=2h"
+
+            # Enable the admin API for runtime config reloads
+            - "--web.enable-lifecycle"
+
+            # Listen on all interfaces inside the pod
+            - "--web.listen-address=0.0.0.0:9090"
+
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+              name: web
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # Readiness: Prometheus is ready when its /-/ready endpoint responds.
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+
+          # Liveness: Restart if /-/healthy stops responding.
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+
+          volumeMounts:
+            # Mount the prometheus.yml configuration from the ConfigMap.
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus
+              readOnly: true
+
+            # Data directory for TSDB storage.
+            - name: prometheus-data
+              mountPath: /prometheus/data
+
+      volumes:
+        # The ConfigMap containing our prometheus.yml scrape configuration.
+        - name: prometheus-config-volume
+          configMap:
+            name: prometheus-config
+            # defaultMode 420 = 0644 (owner read-write, others read)
+            defaultMode: 420
+
+        # emptyDir: temporary storage — data is lost if the pod is
+        # rescheduled. For persistence, replace with a PVC.
+        - name: prometheus-data
+          emptyDir: {}

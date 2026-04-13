@@ -1,0 +1,97 @@
+# =============================================================================
+# prometheus-configmap.yaml — Prometheus scrape configuration
+# =============================================================================
+# This ConfigMap contains the prometheus.yml configuration file that gets
+# mounted into the Prometheus container at /etc/prometheus/prometheus.yml.
+#
+# Scrape jobs defined:
+#   1. prometheus  : Prometheus scrapes its own /metrics endpoint (self-monitoring)
+#   2. hospital-db : Scrapes the postgres-exporter for PostgreSQL metrics
+#                    (pg_stat_activity_count, pg_locks_count, pg_up, etc.)
+#   3. load-simulator : Scrapes the load simulator's custom metrics
+#                       (will be configured in Phase 4)
+#
+# All scrape intervals are set to 10s for near-real-time dashboard updates
+# while keeping the metric volume manageable for a demo.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: monitoring
+data:
+  prometheus.yml: |
+    # =======================================================================
+    # Global Configuration
+    # =======================================================================
+    global:
+      # How often Prometheus scrapes targets by default.
+      # Individual jobs can override this.
+      scrape_interval: 10s
+
+      # How often rules (recording & alerting) are evaluated.
+      evaluation_interval: 10s
+
+      # Timeout for individual scrape requests.
+      scrape_timeout: 5s
+
+    # =======================================================================
+    # Scrape Configurations
+    # =======================================================================
+    scrape_configs:
+
+      # -------------------------------------------------------------------
+      # Job 1: Self-monitoring
+      # -------------------------------------------------------------------
+      # Prometheus scrapes its own internal metrics. Useful for monitoring
+      # Prometheus health, storage usage, and scrape durations.
+      - job_name: "prometheus"
+        static_configs:
+          - targets: ["localhost:9090"]
+            labels:
+              service: "prometheus"
+              environment: "kube-health"
+
+      # -------------------------------------------------------------------
+      # Job 2: Hospital Database (via postgres-exporter)
+      # -------------------------------------------------------------------
+      # This is the PRIMARY scrape target. postgres-exporter translates
+      # PostgreSQL internal statistics into Prometheus-compatible metrics.
+      #
+      # Key metrics scraped:
+      #   pg_stat_activity_count  → active connections (ER load proxy)
+      #   pg_locks_count          → database lock contention
+      #   pg_up                   → database availability (1=up, 0=down)
+      #   pg_stat_database_tup_inserted → rows inserted (patient records)
+      #   process_cpu_seconds_total → exporter process CPU
+      #
+      # The target uses K8s DNS to reach the postgres-exporter service.
+      - job_name: "hospital-db"
+        scrape_interval: 10s
+        static_configs:
+          - targets: ["postgres-exporter-service.kube-health.svc.cluster.local:9187"]
+            labels:
+              service: "hospital-database"
+              database: "hospital_db"
+
+      # -------------------------------------------------------------------
+      # Job 3: Load Simulator (configured in Phase 4)
+      # -------------------------------------------------------------------
+      # The load simulator exposes its own Prometheus metrics showing
+      # current thread count, inserts/sec, and simulation mode.
+      # Target will be: load-simulator-service.kube-health.svc.cluster.local:8080
+      - job_name: "load-simulator"
+        scrape_interval: 10s
+        static_configs:
+          - targets: ["load-simulator-service.kube-health.svc.cluster.local:8080"]
+            labels:
+              service: "load-simulator"
+        # Metric relabeling to add consistent labels across all metrics.
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: "simulator_.*"
+            target_label: source
+            replacement: "er-traffic-simulator"
