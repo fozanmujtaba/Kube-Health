@@ -1,0 +1,16 @@
+# =============================================================================
+# namespace.yaml — Creates the "kube-health" namespace
+# =============================================================================
+# All KUBE-HEALTH resources are isolated in this namespace so they don't
+# collide with other workloads on the same cluster. This is the first
+# resource that must be applied before anything else.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  # The namespace name used by every other resource in this project.
+  name: kube-health
+  labels:
+    # Labels help with filtering and identifying resources.
+    app: kube-health
+    environment: demo

@@ -1,0 +1,163 @@
+# =============================================================================
+# postgres-deployment.yaml — PostgreSQL Deployment for hospital database
+# =============================================================================
+# This Deployment runs the PostgreSQL hospital database that the entire system
+# revolves around. Key design decisions:
+#
+# 1. REPLICAS: Starts at 2 — this is the minimum the HPA will maintain.
+#    The HPA (Phase 3) will scale this between 2 and 10 based on load.
+#
+# 2. RESOURCE LIMITS: CPU requests/limits are set deliberately:
+#    - requests: 250m (the scheduler reserves 0.25 CPU per pod)
+#    - limits: 500m (hard ceiling — pod gets throttled above this)
+#    The HPA uses the ratio of actual CPU to requested CPU for scaling
+#    decisions, so these values directly affect when scaling triggers.
+#
+# 3. PROBES: Both readiness and liveness probes use pg_isready, the
+#    standard PostgreSQL health-check utility. The readiness probe gates
+#    traffic (a pod won't receive connections until it's ready), while
+#    the liveness probe restarts a pod if it becomes unresponsive.
+#
+# 4. INIT SQL: The configmap is mounted into /docker-entrypoint-initdb.d/
+#    so the er_patients table is created automatically on first startup.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: database
+spec:
+  # Starting replica count — HPA will manage this after it's deployed.
+  replicas: 2
+
+  # The selector must match the pod template labels exactly.
+  selector:
+    matchLabels:
+      app: kube-health
+      component: database
+
+  # Strategy: RollingUpdate ensures zero-downtime deploys by spinning
+  # up new pods before terminating old ones.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1          # At most 1 extra pod during an update
+      maxUnavailable: 0    # Never take a pod down before a new one is ready
+
+  template:
+    metadata:
+      labels:
+        app: kube-health
+        component: database
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+              name: postgres
+
+          # ---------- Environment from Secret ----------
+          # Each env var is pulled individually from the postgres-secret.
+          # Using secretKeyRef keeps credentials out of the manifest.
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+
+            # PGDATA sets where PostgreSQL stores its data files.
+            # Placing it in a subdirectory avoids conflicts with the
+            # volume mount's lost+found directory.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+
+          # ---------- Resource Requests and Limits ----------
+          resources:
+            requests:
+              # Guaranteed minimum — the scheduler uses this to place pods.
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              # Hard ceiling — pod is throttled (CPU) or OOM-killed (memory)
+              # if it exceeds these.
+              cpu: "500m"
+              memory: "512Mi"
+
+          # ---------- Readiness Probe ----------
+          # Kubernetes won't send traffic to this pod until pg_isready
+          # succeeds. This prevents connections to a still-initializing DB.
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - "-U"
+                - "hospital_admin"    # Must match POSTGRES_USER
+                - "-d"
+                - "hospital_db"       # Must match POSTGRES_DB
+            initialDelaySeconds: 10   # Wait 10s before first check
+            periodSeconds: 5          # Check every 5 seconds
+            timeoutSeconds: 3         # Fail if pg_isready takes >3s
+            failureThreshold: 3       # Mark unready after 3 consecutive failures
+
+          # ---------- Liveness Probe ----------
+          # If the postgres process hangs or becomes unresponsive, this
+          # probe will fail and Kubernetes will restart the container.
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - "-U"
+                - "hospital_admin"
+                - "-d"
+                - "hospital_db"
+            initialDelaySeconds: 30   # Give postgres time to fully start
+            periodSeconds: 10         # Check every 10 seconds
+            timeoutSeconds: 5
+            failureThreshold: 5       # Restart after 5 consecutive failures
+
+          # ---------- Volume Mounts ----------
+          volumeMounts:
+            # Mount the init SQL script into the Docker entrypoint directory.
+            # PostgreSQL will execute any .sql files here on first boot.
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+
+            # Persistent storage for PostgreSQL data.
+            # Using emptyDir for demo — data is lost if pod is rescheduled.
+            # In production, use a PersistentVolumeClaim instead.
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+
+      # ---------- Volumes ----------
+      volumes:
+        # The configmap containing our init SQL script.
+        - name: init-sql
+          configMap:
+            name: postgres-init-config
+
+        # emptyDir: temporary storage that lives as long as the pod.
+        # Suitable for a demo; for persistence across pod restarts,
+        # replace with a PVC backed by a StorageClass.
+        - name: postgres-data
+          emptyDir: {}

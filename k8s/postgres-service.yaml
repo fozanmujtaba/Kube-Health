@@ -1,0 +1,38 @@
+# =============================================================================
+# postgres-service.yaml — ClusterIP Service for PostgreSQL
+# =============================================================================
+# A ClusterIP service provides a stable internal DNS name and virtual IP
+# for the postgres pods. Other services in the cluster (load simulator,
+# postgres-exporter) connect to PostgreSQL through this service rather
+# than directly to pod IPs, which change on restarts/scaling.
+#
+# DNS name: postgres-service.kube-health.svc.cluster.local
+# Short form (within same namespace): postgres-service
+#
+# ClusterIP is chosen over NodePort because PostgreSQL should NOT be
+# exposed outside the cluster. Only Prometheus and the dashboard backend
+# need external access; postgres stays internal.
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: database
+spec:
+  # ClusterIP: only reachable from inside the cluster.
+  type: ClusterIP
+
+  # The selector determines which pods this service routes traffic to.
+  # It must match the labels on the postgres Deployment's pod template.
+  selector:
+    app: kube-health
+    component: database
+
+  ports:
+    - name: postgres
+      protocol: TCP
+      port: 5432          # The port the service listens on
+      targetPort: 5432    # The port on the pod to forward traffic to

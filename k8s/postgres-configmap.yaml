@@ -1,0 +1,62 @@
+# =============================================================================
+# postgres-configmap.yaml — Initialization SQL for the hospital database
+# =============================================================================
+# ConfigMaps hold non-sensitive configuration data. Here it stores the SQL
+# script that PostgreSQL will execute on first boot (when the data directory
+# is empty). The script is mounted into /docker-entrypoint-initdb.d/ inside
+# the container — any .sql file in that directory runs automatically.
+#
+# This creates the er_patients table that the load simulator writes to and
+# that serves as the core data model for the entire demo.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-config
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: database
+data:
+  # The key becomes the filename inside the mounted directory.
+  # PostgreSQL's entrypoint runs *.sql files alphabetically.
+  init-hospital-db.sql: |
+    -- =======================================================================
+    -- Hospital ER Patients Table
+    -- =======================================================================
+    -- This is the primary table the load simulator targets. Each row
+    -- represents a patient arriving at the emergency room.
+    --
+    -- Columns:
+    --   id            : Auto-incrementing primary key
+    --   patient_name  : Generated patient name (from Faker)
+    --   arrival_time  : Timestamp of when the patient record was inserted
+    --   severity      : Triage severity level 1 (minor) to 5 (critical)
+    --   status        : Current patient status, defaults to 'waiting'
+    -- =======================================================================
+
+    CREATE TABLE IF NOT EXISTS er_patients (
+        id            SERIAL PRIMARY KEY,
+        patient_name  TEXT NOT NULL,
+        arrival_time  TIMESTAMP NOT NULL DEFAULT NOW(),
+        severity      INT NOT NULL CHECK (severity BETWEEN 1 AND 5),
+        status        TEXT NOT NULL DEFAULT 'waiting'
+    );
+
+    -- Create an index on arrival_time for efficient time-range queries
+    -- used by the dashboard's history endpoint.
+    CREATE INDEX IF NOT EXISTS idx_er_patients_arrival
+        ON er_patients (arrival_time DESC);
+
+    -- Create an index on severity for potential triage-priority queries.
+    CREATE INDEX IF NOT EXISTS idx_er_patients_severity
+        ON er_patients (severity);
+
+    -- Insert a few seed rows so the dashboard isn't empty on first boot.
+    INSERT INTO er_patients (patient_name, arrival_time, severity, status)
+    VALUES
+        ('Jane Doe',    NOW() - INTERVAL '10 minutes', 3, 'waiting'),
+        ('John Smith',  NOW() - INTERVAL '8 minutes',  2, 'waiting'),
+        ('Alice Brown', NOW() - INTERVAL '5 minutes',  5, 'in_treatment'),
+        ('Bob Wilson',  NOW() - INTERVAL '3 minutes',  1, 'waiting'),
+        ('Carol Davis', NOW() - INTERVAL '1 minute',   4, 'waiting');
