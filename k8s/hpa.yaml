@@ -1,0 +1,32 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: postgres-hpa
+  namespace: kube-health
+  # The HPA automatically scales our postgres database pods based on metrics
+spec:
+  scaleTargetRef:
+    # We target the postgres deployment from Phase 1
+    apiVersion: apps/v1
+    kind: Deployment
+    name: postgres
+  minReplicas: 2 # Base level of redundancy during normal state
+  maxReplicas: 10 # Cap out at 10 to simulate massive scale during an ER rush
+  metrics:
+  # Metric 1: Native CPU Utilization
+  # If average CPU utilization across all pods exceeds 50%, K8s will scale up
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  # Metric 2: Custom Prometheus Metric
+  # If average active database connections (ER patient load proxy) exceed 20 per pod, scale up
+  - type: Pods
+    pods:
+      metric:
+        name: hospital_active_connections # This maps to the custom metric from Prometheus adapter
+      target:
+        type: AverageValue
+        averageValue: 20

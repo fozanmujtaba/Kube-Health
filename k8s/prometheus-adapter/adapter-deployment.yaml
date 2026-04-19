@@ -1,0 +1,141 @@
+---
+# 1. Service Account for Prometheus Adapter
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: custom-metrics-apiserver
+  namespace: kube-health
+
+---
+# 2. ClusterRole allows the adapter to read necessary cluster resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: custom-metrics-server-resources
+rules:
+- apiGroups: [""]
+  resources: ["namespaces", "pods", "services"]
+  verbs: ["get", "list", "watch"]
+
+---
+# 3. Bind the ClusterRole to the ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: custom-metrics-server-resources
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: custom-metrics-server-resources
+subjects:
+- kind: ServiceAccount
+  name: custom-metrics-apiserver
+  namespace: kube-health
+
+---
+# 4. Auth Delegator Binding: Allows the adapter to delegate authentication checks to K8s
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: custom-metrics:system:auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: custom-metrics-apiserver
+  namespace: kube-health
+
+---
+# 5. Extension API Server Authentication Reader Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: custom-metrics-auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: custom-metrics-apiserver
+  namespace: kube-health
+
+---
+# 6. Deployment: The actual Prometheus Adapter pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-adapter
+  namespace: kube-health
+  labels:
+    app: prometheus-adapter
+# The adapter bridges the gap between Prometheus metrics and Kubernetes native metrics API
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-adapter
+  template:
+    metadata:
+      labels:
+        app: prometheus-adapter
+    spec:
+      serviceAccountName: custom-metrics-apiserver
+      containers:
+      - name: prometheus-adapter
+        # Image explicitly requested in the instructions
+        image: registry.k8s.io/prometheus-adapter/prometheus-adapter:v0.10.0
+        imagePullPolicy: IfNotPresent
+        args:
+        # Point to our internal Prometheus service
+        - --prometheus-url=http://prometheus-service.kube-health.svc.cluster.local:9090
+        # Reference the mounted configmap that maps the metric
+        - --config=/etc/adapter/config.yaml
+        - --v=4
+        # Serve custom metrics API securely
+        - --secure-port=6443
+        ports:
+        - containerPort: 6443
+          name: https
+        volumeMounts:
+        - mountPath: /etc/adapter/
+          name: config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: adapter-config
+
+---
+# 7. Service: Network endpoint for the adapter
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-adapter
+  namespace: kube-health
+spec:
+  ports:
+  - port: 443
+    targetPort: 6443
+  selector:
+    app: prometheus-adapter
+
+---
+# 8. APIService: Mounts the custom metrics API into the Kubernetes master API
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.custom.metrics.k8s.io
+spec:
+  service:
+    name: prometheus-adapter
+    namespace: kube-health
+  group: custom.metrics.k8s.io
+  version: v1beta1
+  # Since the adapter generates a self-signed cert on startup, bypass strict TLS validation
+  insecureSkipTLSVerify: true
+  groupPriorityMinimum: 100
+  versionPriority: 100
