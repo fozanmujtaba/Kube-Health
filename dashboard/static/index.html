@@ -3,313 +3,878 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kube-Health ER Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <title>Kube-Health · ER Operations Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg-0: #05070f;
+      --bg-1: #0a0e1f;
+      --bg-2: #111732;
+      --border: rgba(148, 163, 184, 0.08);
+      --border-strong: rgba(148, 163, 184, 0.18);
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.4);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.4);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.4);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.5);
+      --purple: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.4);
+      --pink: #ec4899;
+    }
+
+    html, body { height: 100%; }
+
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-0);
+      color: var(--text);
+      overflow-x: hidden;
+      letter-spacing: -0.01em;
+      font-weight: 400;
     }
 
+    /* Animated background */
+    .bg-layer { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+
+    .bg-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+    }
+
+    .bg-glow {
+      position: absolute; border-radius: 50%;
+      filter: blur(120px); opacity: 0.35; pointer-events: none;
+    }
+    .bg-glow.cyan   { width: 600px; height: 600px; background: var(--cyan);   top: -150px;    left: -100px;  animation: float 22s ease-in-out infinite; }
+    .bg-glow.purple { width: 500px; height: 500px; background: var(--purple); bottom: -100px; right: -100px; animation: float 28s ease-in-out infinite reverse; }
+    .bg-glow.pink   { width: 400px; height: 400px; background: var(--pink);   top: 40%;       left: 60%;     animation: float 30s ease-in-out infinite; opacity: 0.2; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%      { transform: translate(80px, -60px) scale(1.1); }
+      66%      { transform: translate(-60px, 40px) scale(0.95); }
+    }
+
+    /* Header */
     header {
-      background: #1e293b;
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      border-bottom: 1px solid #334155;
+      position: sticky; top: 0; z-index: 50;
+      padding: 1.2rem 2rem;
+      display: flex; align-items: center; gap: 1.2rem;
+      background: rgba(10, 14, 31, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
     }
 
-    header h1 { font-size: 1.25rem; font-weight: 600; }
-    header .badge {
-      font-size: 0.7rem;
-      background: #22c55e;
-      color: #052e16;
-      padding: 2px 8px;
-      border-radius: 9999px;
-      font-weight: 700;
+    .logo { display: flex; align-items: center; gap: 0.7rem; font-weight: 700; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .logo-mark {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      display: grid; place-items: center;
+      box-shadow: 0 0 30px var(--cyan-glow);
+      position: relative;
+    }
+    .logo-mark::after { content: ""; position: absolute; inset: 2px; border-radius: 8px; background: var(--bg-1); }
+    .logo-mark svg { position: relative; z-index: 1; }
+    .logo-text { display: flex; flex-direction: column; line-height: 1.1; }
+    .logo-text span:last-child {
+      font-size: 0.65rem; font-weight: 500; color: var(--text-dim);
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+
+    .header-status { margin-left: auto; display: flex; align-items: center; gap: 1.2rem; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.4rem 0.85rem;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 100px;
+      font-size: 0.75rem; font-weight: 600; color: var(--green);
+      letter-spacing: 0.04em; transition: all 0.4s;
+    }
+
+    .status-pill.offline {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: var(--red);
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      background: var(--green); border-radius: 50%;
+      box-shadow: 0 0 10px var(--green-glow);
+      animation: pulse-dot 1.6s ease-in-out infinite;
+    }
+    .status-pill.offline .status-dot { background: var(--red); box-shadow: 0 0 10px var(--red-glow); }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%      { transform: scale(1.3); opacity: 0.7; }
+    }
+
+    .clock {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem; color: var(--text-dim); letter-spacing: 0.05em;
+    }
+
+    main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
+
+    .hero { margin-bottom: 2rem; }
+    .hero h1 {
+      font-size: 2.4rem; font-weight: 800; letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.3rem;
+    }
+    .hero p { color: var(--text-dim); font-size: 0.95rem; }
+
+    /* Metric cards */
+    .metric-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      position: relative; padding: 1.3rem;
+      background: linear-gradient(180deg, rgba(17, 23, 50, 0.6) 0%, rgba(10, 14, 31, 0.6) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      transition: transform 0.25s, border-color 0.25s;
+    }
+
+    .metric-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+
+    .metric-card::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent, var(--cyan)), transparent);
+      opacity: 0.6;
+    }
+
+    .metric-card::after {
+      content: ""; position: absolute; top: -50%; right: -30%;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, var(--accent-glow, var(--cyan-glow)), transparent 70%);
+      opacity: 0.15; pointer-events: none;
+    }
+
+    .metric-card[data-accent="green"]  { --accent: var(--green);  --accent-glow: var(--green-glow); }
+    .metric-card[data-accent="amber"]  { --accent: var(--amber);  --accent-glow: var(--amber-glow); }
+    .metric-card[data-accent="purple"] { --accent: var(--purple); --accent-glow: var(--purple-glow); }
+
+    .metric-label {
+      display: flex; align-items: center; gap: 0.45rem;
+      font-size: 0.72rem; font-weight: 600; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 0.9rem;
+    }
+
+    .metric-icon {
+      width: 24px; height: 24px; border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      display: grid; place-items: center;
+      color: var(--accent, var(--cyan));
+    }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2.3rem; font-weight: 700; line-height: 1;
+      letter-spacing: -0.03em; color: #fff;
+      display: flex; align-items: baseline; gap: 0.3rem;
+    }
+    .metric-value .unit { font-size: 0.85rem; font-weight: 500; color: var(--text-dim); }
+
+    .metric-delta {
+      margin-top: 0.6rem; font-size: 0.72rem; color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Big grid */
+    .big-grid {
+      display: grid; grid-template-columns: 2fr 1fr;
+      gap: 1rem; margin-bottom: 1rem;
+    }
+
+    .panel {
+      position: relative; padding: 1.5rem;
+      background: linear-gradient(180deg, rgba(17, 23, 50, 0.5) 0%, rgba(10, 14, 31, 0.5) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.2rem;
+    }
+
+    .panel-title { font-size: 0.85rem; font-weight: 600; color: #fff; letter-spacing: -0.01em; }
+    .panel-sub {
+      font-size: 0.7rem; color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
+    }
+
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.15rem 0.55rem; font-size: 0.65rem;
+      font-weight: 700; letter-spacing: 0.1em;
+      color: var(--red);
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 6px;
+    }
+    .live-badge::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--red); animation: pulse-dot 1.3s infinite;
+    }
+
+    /* ECG */
+    .ecg-container { position: relative; height: 280px; }
+    .ecg-svg { width: 100%; height: 100%; }
+    .ecg-path {
+      fill: none; stroke: url(#ecg-gradient); stroke-width: 2;
+      filter: drop-shadow(0 0 6px var(--green-glow));
+    }
+    .ecg-fill { fill: url(#ecg-fill-gradient); opacity: 0.35; }
+    .ecg-pulse { fill: var(--green); filter: drop-shadow(0 0 10px var(--green)); }
+    .ecg-grid line { stroke: rgba(148, 163, 184, 0.06); stroke-width: 1; }
+
+    /* Pods */
+    .pod-viz { display: flex; flex-direction: column; gap: 1.2rem; }
+    .pod-count-display { display: flex; align-items: baseline; gap: 0.5rem; font-family: 'JetBrains Mono', monospace; }
+    .pod-count-display .num { font-size: 3.5rem; font-weight: 700; line-height: 1; color: #fff; letter-spacing: -0.04em; }
+    .pod-count-display .slash { color: var(--text-muted); font-size: 1.8rem; }
+    .pod-count-display .max { font-size: 1.4rem; color: var(--text-dim); font-weight: 500; }
+
+    .pod-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+
+    .pod {
+      aspect-ratio: 1; border-radius: 10px; position: relative;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      overflow: hidden;
+    }
+
+    .pod.active {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(168, 85, 247, 0.1));
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px var(--cyan-glow), inset 0 0 15px rgba(6, 182, 212, 0.1);
+    }
+
+    .pod.active::before {
+      content: ""; position: absolute; inset: 3px; border-radius: 7px;
+      background:
+        radial-gradient(circle at 30% 30%, var(--cyan), transparent 60%),
+        radial-gradient(circle at 70% 80%, var(--purple), transparent 60%);
+      opacity: 0.5; animation: pod-pulse 2.5s ease-in-out infinite;
+    }
+
+    .pod.active::after {
+      content: "▸"; position: absolute; inset: 0; display: grid; place-items: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+      color: var(--cyan); text-shadow: 0 0 8px var(--cyan);
+    }
+
+    .pod.pending {
+      animation: pod-spawn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border-color: var(--amber);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    @keyframes pod-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+    @keyframes pod-spawn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    .pod-legend { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+    /* Charts row */
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+
+    canvas { width: 100% !important; height: 200px !important; }
+
+    /* Events */
+    .event-feed { max-height: 200px; overflow-y: auto; padding-right: 0.5rem; }
+    .event-feed::-webkit-scrollbar { width: 6px; }
+    .event-feed::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+    .event-feed::-webkit-scrollbar-track { background: transparent; }
+
+    .event {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px dashed var(--border);
+      animation: event-in 0.4s ease-out;
+    }
+    .event:last-child { border-bottom: none; }
+    @keyframes event-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+    .event-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .event-icon.up    { background: rgba(16, 185, 129, 0.1); color: var(--green); }
+    .event-icon.down  { background: rgba(168, 85, 247, 0.1); color: var(--purple); }
+    .event-icon.warn  { background: rgba(245, 158, 11, 0.1); color: var(--amber); }
+    .event-icon.info  { background: rgba(6, 182, 212, 0.1);  color: var(--cyan); }
+
+    .event-body { flex: 1; min-width: 0; }
+    .event-msg { font-size: 0.8rem; color: var(--text); font-weight: 500; }
+    .event-time { font-size: 0.68rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+
+    /* Gauge */
+    .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; padding: 1rem 0; }
+    .gauge-value { font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; font-weight: 700; color: #fff; letter-spacing: -0.04em; line-height: 1; }
+    .gauge-value .unit { font-size: 0.9rem; color: var(--text-dim); margin-left: 0.2rem; }
+
+    .gauge-bar {
+      width: 100%; height: 8px;
+      background: rgba(148, 163, 184, 0.08);
+      border-radius: 4px; overflow: hidden; position: relative;
+    }
+    .gauge-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      border-radius: 4px;
+      transition: width 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .gauge-scale {
+      display: flex; justify-content: space-between; width: 100%;
+      font-size: 0.65rem; color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
+    }
+
+    /* HPA board rows */
+    .hpa-row { display: flex; justify-content: space-between; font-size: 0.8rem; }
+    .hpa-row span:first-child { color: var(--text-dim); }
+    .hpa-row span:last-child { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+
+    /* Footer */
+    footer {
+      margin-top: 2rem; padding: 1.5rem 0;
+      text-align: center; font-size: 0.72rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
       letter-spacing: 0.05em;
     }
-    header .badge.offline { background: #ef4444; color: #fff; }
-
-    .last-updated {
-      margin-left: auto;
-      font-size: 0.75rem;
-      color: #64748b;
+    footer .signature {
+      background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink));
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700; letter-spacing: 0.1em;
     }
 
-    main {
-      padding: 1.5rem 2rem;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    /* ---- Stat cards ---- */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .stat-card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
-      padding: 1.25rem;
-    }
-
-    .stat-card .label {
-      font-size: 0.75rem;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-card .value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #38bdf8;
-      line-height: 1;
-    }
-
-    .stat-card .value.green { color: #22c55e; }
-    .stat-card .value.amber { color: #f59e0b; }
-    .stat-card .value.red   { color: #ef4444; }
-
-    /* ---- Charts ---- */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 1rem;
-    }
-
-    .chart-card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
-      padding: 1.25rem;
-    }
-
-    .chart-card h2 {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #94a3b8;
-      margin-bottom: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    canvas { width: 100% !important; }
-
-    /* ---- Simulator mode switcher ---- */
-    .mode-bar {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .mode-bar span { font-size: 0.85rem; color: #94a3b8; }
-
-    .mode-btn {
-      padding: 0.4rem 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: #e2e8f0;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background 0.15s;
-    }
-
-    .mode-btn:hover { background: #334155; }
-    .mode-btn.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; font-weight: 600; }
-
+    /* Error banner */
     .error-banner {
-      background: #7f1d1d;
-      border: 1px solid #ef4444;
-      border-radius: 0.5rem;
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-      display: none;
+      display: none; padding: 0.8rem 1rem;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px; color: #fca5a5;
+      font-size: 0.8rem; margin-bottom: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    @media (max-width: 1100px) {
+      .metric-grid { grid-template-columns: repeat(2, 1fr); }
+      .big-grid    { grid-template-columns: 1fr; }
+      .chart-row   { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      main { padding: 1rem; }
+      .hero h1 { font-size: 1.7rem; }
+      .metric-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
+<div class="bg-layer">
+  <div class="bg-grid"></div>
+  <div class="bg-glow cyan"></div>
+  <div class="bg-glow purple"></div>
+  <div class="bg-glow pink"></div>
+</div>
+
 <header>
-  <h1>🏥 Kube-Health ER Dashboard</h1>
-  <span id="db-badge" class="badge">DB ONLINE</span>
-  <span class="last-updated" id="last-updated">—</span>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L14.5 9H22L16 13.5L18 21L12 17L6 21L8 13.5L2 9H9.5L12 2Z" fill="url(#lg-grad)" />
+        <defs>
+          <linearGradient id="lg-grad" x1="0" y1="0" x2="24" y2="24">
+            <stop offset="0%"  stop-color="#06b6d4" />
+            <stop offset="100%" stop-color="#a855f7" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <span>Kube-Health</span>
+      <span>ER · OPS CENTER</span>
+    </div>
+  </div>
+
+  <div class="header-status">
+    <span class="clock" id="clock">—</span>
+    <div class="status-pill" id="db-badge">
+      <span class="status-dot"></span>
+      <span id="db-badge-text">SYSTEMS NOMINAL</span>
+    </div>
+  </div>
 </header>
 
 <main>
+
+  <section class="hero">
+    <h1>Emergency Room Operations</h1>
+    <p>Real-time monitoring · PostgreSQL cluster · HPA-driven autoscaling</p>
+  </section>
+
   <div class="error-banner" id="error-banner"></div>
 
-  <!-- Stat cards -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="label">Active DB Connections</div>
-      <div class="value" id="stat-connections">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Insert Rate (req/s)</div>
-      <div class="value green" id="stat-rate">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Simulator Threads</div>
-      <div class="value amber" id="stat-threads">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Total Patients Inserted</div>
-      <div class="value" id="stat-total">—</div>
-    </div>
-  </div>
+  <section class="metric-grid">
 
-  <!-- Charts -->
-  <div class="charts-grid">
-    <div class="chart-card">
-      <h2>Active DB Connections (10 min)</h2>
-      <canvas id="chart-connections" height="200"></canvas>
+    <div class="metric-card" data-accent="cyan">
+      <div class="metric-label">
+        <span class="metric-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a2 2 0 110 4 2 2 0 010-4zm0 12c-2.5 0-4.7-1.3-6-3.2.1-2 4-3.1 6-3.1s5.9 1.1 6 3.1c-1.3 1.9-3.5 3.2-6 3.2z"/></svg>
+        </span>
+        Active Connections
+      </div>
+      <div class="metric-value"><span id="stat-connections">—</span></div>
+      <div class="metric-delta">LIVE · pg_stat_activity</div>
     </div>
-    <div class="chart-card">
-      <h2>Insert Rate / sec (10 min)</h2>
-      <canvas id="chart-inserts" height="200"></canvas>
+
+    <div class="metric-card" data-accent="green">
+      <div class="metric-label">
+        <span class="metric-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </span>
+        Patient Intake Rate
+      </div>
+      <div class="metric-value">
+        <span id="stat-rate">—</span><span class="unit">/ sec</span>
+      </div>
+      <div class="metric-delta">rate(simulator_inserts_total[1m])</div>
     </div>
-    <div class="chart-card">
-      <h2>Postgres Replicas (HPA)</h2>
-      <canvas id="chart-replicas" height="200"></canvas>
+
+    <div class="metric-card" data-accent="amber">
+      <div class="metric-label">
+        <span class="metric-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </span>
+        Simulator Threads
+      </div>
+      <div class="metric-value"><span id="stat-threads">—</span></div>
+      <div class="metric-delta">active worker processes</div>
     </div>
-  </div>
+
+    <div class="metric-card" data-accent="purple">
+      <div class="metric-label">
+        <span class="metric-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v10M4 7v10l8 4"/></svg>
+        </span>
+        Total Patients
+      </div>
+      <div class="metric-value"><span id="stat-total">—</span></div>
+      <div class="metric-delta">cumulative inserts since boot</div>
+    </div>
+
+  </section>
+
+  <section class="big-grid">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🫀 Patient Intake Waveform</div>
+          <div class="panel-sub">inserts per second · last 10 min</div>
+        </div>
+        <span class="live-badge">LIVE</span>
+      </div>
+
+      <div class="ecg-container">
+        <svg class="ecg-svg" id="ecg-svg" viewBox="0 0 800 280" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="ecg-gradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"  stop-color="#06b6d4" stop-opacity="0.2"/>
+              <stop offset="80%" stop-color="#10b981" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#10b981" stop-opacity="1"/>
+            </linearGradient>
+            <linearGradient id="ecg-fill-gradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"  stop-color="#10b981" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <g class="ecg-grid" id="ecg-grid"></g>
+          <path class="ecg-fill" id="ecg-fill-path" d=""/>
+          <path class="ecg-path" id="ecg-main-path" d=""/>
+          <circle class="ecg-pulse" id="ecg-pulse" cx="0" cy="280" r="5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">⚡ Postgres Replica Pods</div>
+          <div class="panel-sub">HPA-driven · min 2 / max 10</div>
+        </div>
+      </div>
+
+      <div class="pod-viz">
+        <div class="pod-count-display">
+          <span class="num" id="pod-current">—</span>
+          <span class="slash">/</span>
+          <span class="max">10</span>
+        </div>
+        <div class="pod-grid" id="pod-grid"></div>
+        <div class="pod-legend">
+          <span>▸ active</span>
+          <span>· idle</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="chart-row">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📊 Replica Scaling History</div>
+          <div class="panel-sub">current vs desired replicas</div>
+        </div>
+      </div>
+      <canvas id="chart-replicas"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🛰️ System Event Feed</div>
+          <div class="panel-sub">scale-up · scale-down · anomalies</div>
+        </div>
+      </div>
+      <div class="event-feed" id="event-feed">
+        <div class="event">
+          <div class="event-icon info">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          </div>
+          <div class="event-body">
+            <div class="event-msg">Awaiting first Prometheus scrape…</div>
+            <div class="event-time">INITIALIZING</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="chart-row">
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🧠 Connection Pool Load</div>
+          <div class="panel-sub">per-replica average vs HPA target (20)</div>
+        </div>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge-value"><span id="gauge-val">—</span><span class="unit">conn/pod</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="gauge-fill" style="width: 0%"></div></div>
+        <div class="gauge-scale">
+          <span>0</span>
+          <span>TARGET 20</span>
+          <span>40+</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🎯 HPA Status Board</div>
+          <div class="panel-sub">scaling decisions in real time</div>
+        </div>
+      </div>
+      <div style="padding: 0.5rem 0; display: flex; flex-direction: column; gap: 0.8rem;">
+        <div class="hpa-row"><span>Current Replicas</span><span id="hpa-current" style="color: var(--cyan);">—</span></div>
+        <div class="hpa-row"><span>Desired Replicas</span><span id="hpa-desired" style="color: var(--purple);">—</span></div>
+        <div class="hpa-row"><span>Scaling Direction</span><span id="hpa-direction">STEADY</span></div>
+        <div class="hpa-row"><span>Custom Metric</span><span style="font-weight: 500; color: var(--text);">hospital_active_connections</span></div>
+        <div class="hpa-row"><span>Target Per Pod</span><span style="font-weight: 500; color: var(--text);">20 conn</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    KUBE-HEALTH · ER OPERATIONS CENTER ·
+    <span class="signature">DESIGNED BY CLAUDE OPUS 4.7</span>
+  </footer>
+
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script>
-  const REFRESH_MS = 5000;
+  const REFRESH_MS = 3000;
+  const MAX_EVENTS = 40;
+  const MAX_PODS = 10;
 
-  // ---- Chart factory ----
-  function makeChart(id, label, color) {
-    const ctx = document.getElementById(id).getContext('2d');
-    return new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label,
-          data: [],
-          borderColor: color,
-          backgroundColor: color + '22',
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: true,
-        }]
-      },
-      options: {
-        responsive: true,
-        animation: false,
-        scales: {
-          x: { display: false },
-          y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }
-        },
-        plugins: { legend: { display: false } }
+  /* ------------ Clock ------------ */
+  function updateClock() {
+    const d = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const tzOffset = -d.getTimezoneOffset() / 60;
+    const tzStr = (tzOffset >= 0 ? '+' : '') + tzOffset;
+    document.getElementById('clock').textContent =
+      `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} UTC${tzStr}`;
+  }
+  setInterval(updateClock, 1000); updateClock();
+
+  /* ------------ Pod grid ------------ */
+  const podGrid = document.getElementById('pod-grid');
+  for (let i = 0; i < MAX_PODS; i++) {
+    const pod = document.createElement('div');
+    pod.className = 'pod';
+    pod.dataset.idx = i;
+    podGrid.appendChild(pod);
+  }
+  let lastReplicas = null;
+  function renderPods(count) {
+    const pods = podGrid.children;
+    for (let i = 0; i < MAX_PODS; i++) {
+      const shouldBeActive = i < count;
+      const isActive = pods[i].classList.contains('active');
+      if (shouldBeActive && !isActive) {
+        pods[i].classList.add('active', 'pending');
+        setTimeout(() => pods[i].classList.remove('pending'), 600);
+      } else if (!shouldBeActive && isActive) {
+        pods[i].classList.remove('active');
       }
-    });
+    }
+    if (lastReplicas !== null && lastReplicas !== count) {
+      pushEvent(
+        count > lastReplicas ? 'up' : 'down',
+        `HPA ${count > lastReplicas ? 'scaled UP' : 'scaled DOWN'}: ${lastReplicas} → ${count} replicas`
+      );
+    }
+    lastReplicas = count;
   }
 
-  const connChart    = makeChart('chart-connections', 'Active Connections', '#38bdf8');
-  const insertChart  = makeChart('chart-inserts',     'Inserts/sec',        '#22c55e');
-  const replicaChart = makeChart('chart-replicas',    'Replicas',           '#f59e0b');
+  /* ------------ ECG ------------ */
+  const ecgPath = document.getElementById('ecg-main-path');
+  const ecgFillPath = document.getElementById('ecg-fill-path');
+  const ecgPulse = document.getElementById('ecg-pulse');
+  const ecgGrid = document.getElementById('ecg-grid');
 
-  // Replica chart gets two datasets
-  replicaChart.data.datasets.push({
-    label: 'Desired',
-    data: [],
-    borderColor: '#94a3b8',
-    borderDash: [4, 4],
-    borderWidth: 1.5,
-    pointRadius: 0,
-    tension: 0.3,
-    fill: false,
+  (function drawGrid() {
+    const W = 800, H = 280;
+    let g = '';
+    for (let x = 0; x <= W; x += 40) g += `<line x1="${x}" y1="0" x2="${x}" y2="${H}"/>`;
+    for (let y = 0; y <= H; y += 35) g += `<line x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
+    ecgGrid.innerHTML = g;
+  })();
+
+  function renderEcg(series) {
+    if (!series || series.length === 0) {
+      ecgPath.setAttribute('d', '');
+      ecgFillPath.setAttribute('d', '');
+      return;
+    }
+    const W = 800, H = 280, pad = 8;
+    const values = series.map(p => p.value);
+    const max = Math.max(...values, 1);
+    const stepX = W / Math.max(series.length - 1, 1);
+
+    let d = '';
+    series.forEach((p, i) => {
+      const x = i * stepX;
+      const y = H - pad - (p.value / max) * (H - pad * 2);
+      d += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+    });
+    ecgPath.setAttribute('d', d);
+    ecgFillPath.setAttribute('d', d + ` L ${W} ${H} L 0 ${H} Z`);
+
+    const lastX = (series.length - 1) * stepX;
+    const lastY = H - pad - (values[values.length - 1] / max) * (H - pad * 2);
+    ecgPulse.setAttribute('cx', lastX);
+    ecgPulse.setAttribute('cy', lastY);
+  }
+
+  /* ------------ Chart.js replica history ------------ */
+  const replicaCtx = document.getElementById('chart-replicas').getContext('2d');
+  const replicaChart = new Chart(replicaCtx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Current', data: [], borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.15)',
+          borderWidth: 2.5, pointRadius: 0, tension: 0.2, fill: true, stepped: 'before' },
+        { label: 'Desired', data: [], borderColor: '#a855f7', backgroundColor: 'transparent',
+          borderWidth: 2, borderDash: [5, 4], pointRadius: 0, tension: 0.2, fill: false, stepped: 'before' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      scales: {
+        x: { display: false },
+        y: {
+          beginAtZero: true, suggestedMax: 10,
+          grid: { color: 'rgba(148, 163, 184, 0.06)' },
+          ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+        }
+      },
+      plugins: {
+        legend: {
+          display: true, position: 'top', align: 'end',
+          labels: { color: '#94a3b8', font: { size: 11, family: 'Inter' }, boxWidth: 10, boxHeight: 10, usePointStyle: true }
+        }
+      }
+    }
   });
 
-  function updateChart(chart, seriesData, datasetIndex = 0) {
-    if (!seriesData || seriesData.length === 0) return;
-    chart.data.labels = seriesData.map(p => {
-      const d = new Date(p.ts * 1000);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    });
-    chart.data.datasets[datasetIndex].data = seriesData.map(p => p.value);
-    chart.update('none');
+  /* ------------ Events ------------ */
+  const eventFeed = document.getElementById('event-feed');
+  const ICONS = {
+    up:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l5-5 5 5M7 7l5-5 5 5"/></svg>',
+    down: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l5 5 5-5M7 17l5 5 5-5"/></svg>',
+    warn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 22h20L12 2zM12 9v5M12 17h.01"/></svg>',
+    info: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
+  };
+  function pushEvent(type, msg) {
+    const now = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const el = document.createElement('div');
+    el.className = 'event';
+    el.innerHTML = `
+      <div class="event-icon ${type}">${ICONS[type]}</div>
+      <div class="event-body">
+        <div class="event-msg">${msg}</div>
+        <div class="event-time">${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}</div>
+      </div>
+    `;
+    const ph = eventFeed.querySelector('.event .event-msg');
+    if (ph && ph.textContent.includes('Awaiting')) eventFeed.innerHTML = '';
+    eventFeed.insertBefore(el, eventFeed.firstChild);
+    while (eventFeed.children.length > MAX_EVENTS) eventFeed.removeChild(eventFeed.lastChild);
   }
 
-  // ---- Fetch helpers ----
-  async function fetchMetrics() {
-    const r = await fetch('/api/metrics');
-    if (!r.ok) throw new Error(`/api/metrics ${r.status}`);
+  /* ------------ Animated number ------------ */
+  function animateNumber(el, to, { decimals = 0, duration = 600 } = {}) {
+    const from = parseFloat(el.dataset.current || '0');
+    const start = performance.now();
+    el.dataset.current = to;
+    function tick(now) {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const v = from + (to - from) * eased;
+      el.textContent = decimals > 0 ? v.toFixed(decimals) : Math.round(v).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  async function fetchJSON(path) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(`${path} ${r.status}`);
     return r.json();
   }
 
-  async function fetchHistory() {
-    const r = await fetch('/api/metrics/history');
-    if (!r.ok) throw new Error(`/api/metrics/history ${r.status}`);
-    return r.json();
-  }
+  let prevInsertRate = null;
+  let firstLoad = true;
 
-  async function fetchHPA() {
-    const r = await fetch('/api/hpa');
-    if (!r.ok) throw new Error(`/api/hpa ${r.status}`);
-    return r.json();
-  }
-
-  // ---- Refresh loop ----
   async function refresh() {
-    const errBanner = document.getElementById('error-banner');
+    const err = document.getElementById('error-banner');
     try {
-      const [metrics, history, hpa] = await Promise.all([fetchMetrics(), fetchHistory(), fetchHPA()]);
+      const [metrics, history, hpa] = await Promise.all([
+        fetchJSON('/api/metrics'),
+        fetchJSON('/api/metrics/history'),
+        fetchJSON('/api/hpa'),
+      ]);
 
-      // Stat cards
-      document.getElementById('stat-connections').textContent = metrics.active_connections ?? '—';
-      document.getElementById('stat-rate').textContent =
-        metrics.insert_rate_per_sec != null ? metrics.insert_rate_per_sec.toFixed(1) : '—';
-      document.getElementById('stat-threads').textContent = metrics.simulator_active_threads ?? '—';
-      document.getElementById('stat-total').textContent =
-        metrics.inserts_total != null ? Math.round(metrics.inserts_total).toLocaleString() : '—';
+      animateNumber(document.getElementById('stat-connections'), metrics.active_connections ?? 0);
+      animateNumber(document.getElementById('stat-rate'), metrics.insert_rate_per_sec ?? 0, { decimals: 1 });
+      animateNumber(document.getElementById('stat-threads'), metrics.simulator_active_threads ?? 0);
+      animateNumber(document.getElementById('stat-total'), metrics.inserts_total ?? 0);
 
-      // DB badge
       const badge = document.getElementById('db-badge');
+      const badgeText = document.getElementById('db-badge-text');
       if (metrics.db_up) {
-        badge.textContent = 'DB ONLINE';
-        badge.className = 'badge';
+        badge.classList.remove('offline');
+        badgeText.textContent = 'SYSTEMS NOMINAL';
       } else {
-        badge.textContent = 'DB OFFLINE';
-        badge.className = 'badge offline';
+        badge.classList.add('offline');
+        badgeText.textContent = 'DATABASE OFFLINE';
       }
 
-      // Charts
-      updateChart(connChart, history.active_connections);
-      updateChart(insertChart, history.insert_rate);
-      updateChart(replicaChart, hpa.current_replicas, 0);
-      updateChart(replicaChart, hpa.desired_replicas, 1);
+      renderEcg(history.insert_rate);
 
-      document.getElementById('last-updated').textContent =
-        'Updated ' + new Date().toLocaleTimeString();
+      const currentReplicas = hpa.current_replicas.length > 0
+        ? hpa.current_replicas[hpa.current_replicas.length - 1].value : 2;
+      const desiredReplicas = hpa.desired_replicas.length > 0
+        ? hpa.desired_replicas[hpa.desired_replicas.length - 1].value : currentReplicas;
 
-      errBanner.style.display = 'none';
-    } catch (err) {
-      errBanner.textContent = '⚠ ' + err.message;
-      errBanner.style.display = 'block';
+      document.getElementById('pod-current').textContent = currentReplicas;
+      renderPods(currentReplicas);
+
+      document.getElementById('hpa-current').textContent = currentReplicas;
+      document.getElementById('hpa-desired').textContent = desiredReplicas;
+      const direction = document.getElementById('hpa-direction');
+      if (desiredReplicas > currentReplicas) {
+        direction.textContent = '↑ SCALING UP'; direction.style.color = 'var(--green)';
+      } else if (desiredReplicas < currentReplicas) {
+        direction.textContent = '↓ SCALING DOWN'; direction.style.color = 'var(--purple)';
+      } else {
+        direction.textContent = '→ STEADY'; direction.style.color = 'var(--text-dim)';
+      }
+
+      const connPerPod = currentReplicas > 0 ? (metrics.active_connections || 0) / currentReplicas : 0;
+      document.getElementById('gauge-val').textContent = connPerPod.toFixed(1);
+      document.getElementById('gauge-fill').style.width = Math.min(100, (connPerPod / 40) * 100) + '%';
+
+      replicaChart.data.labels = hpa.current_replicas.map(p => {
+        const d = new Date(p.ts * 1000);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      });
+      replicaChart.data.datasets[0].data = hpa.current_replicas.map(p => p.value);
+      replicaChart.data.datasets[1].data = hpa.desired_replicas.map(p => p.value);
+      replicaChart.update('none');
+
+      if (prevInsertRate != null && metrics.insert_rate_per_sec != null) {
+        if (metrics.insert_rate_per_sec > prevInsertRate * 3 && metrics.insert_rate_per_sec > 50) {
+          pushEvent('warn', `Traffic spike: ${metrics.insert_rate_per_sec.toFixed(0)} inserts/sec`);
+        }
+      }
+      prevInsertRate = metrics.insert_rate_per_sec;
+
+      if (firstLoad) {
+        pushEvent('info', `Dashboard online · ${currentReplicas} replicas active`);
+        firstLoad = false;
+      }
+
+      err.style.display = 'none';
+    } catch (e) {
+      err.textContent = '⚠ ' + e.message;
+      err.style.display = 'block';
     }
   }
 
