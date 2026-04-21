@@ -1,0 +1,26 @@
+# =============================================================================
+# dashboard-service.yaml — NodePort service for the Kube-Health dashboard
+# =============================================================================
+# Exposes the dashboard on NodePort 30050 so you can open it from your
+# host machine at http://<minikube-ip>:30050 or http://localhost:30050
+# (with `minikube tunnel` or `kubectl port-forward`).
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-service
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: dashboard
+spec:
+  type: NodePort
+  selector:
+    app: kube-health
+    component: dashboard
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      nodePort: 30050
+      protocol: TCP

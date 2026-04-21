@@ -1,0 +1,23 @@
+# =============================================================================
+# postgres-pvc.yaml — PersistentVolumeClaim for PostgreSQL data
+# =============================================================================
+# Replaces the emptyDir volume in postgres-deployment.yaml. Data is now
+# preserved across pod restarts and rescheduling events.
+#
+# StorageClass: left empty to use the cluster default (works on minikube,
+# kind, GKE, EKS, AKS out of the box). Set explicitly for production.
+# =============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-pvc
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

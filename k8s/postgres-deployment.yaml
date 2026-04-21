@@ -156,8 +156,7 @@ spec:
           configMap:
             name: postgres-init-config
 
-        # emptyDir: temporary storage that lives as long as the pod.
-        # Suitable for a demo; for persistence across pod restarts,
-        # replace with a PVC backed by a StorageClass.
+        # PersistentVolumeClaim: data survives pod restarts and rescheduling.
         - name: postgres-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: postgres-data-pvc

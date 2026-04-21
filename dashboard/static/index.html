@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kube-Health ER Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1e293b;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 1px solid #334155;
+    }
+
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header .badge {
+      font-size: 0.7rem;
+      background: #22c55e;
+      color: #052e16;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    header .badge.offline { background: #ef4444; color: #fff; }
+
+    .last-updated {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    main {
+      padding: 1.5rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ---- Stat cards ---- */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+    }
+
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #38bdf8;
+      line-height: 1;
+    }
+
+    .stat-card .value.green { color: #22c55e; }
+    .stat-card .value.amber { color: #f59e0b; }
+    .stat-card .value.red   { color: #ef4444; }
+
+    /* ---- Charts ---- */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1rem;
+    }
+
+    .chart-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+    }
+
+    .chart-card h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    canvas { width: 100% !important; }
+
+    /* ---- Simulator mode switcher ---- */
+    .mode-bar {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .mode-bar span { font-size: 0.85rem; color: #94a3b8; }
+
+    .mode-btn {
+      padding: 0.4rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #e2e8f0;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+
+    .mode-btn:hover { background: #334155; }
+    .mode-btn.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; font-weight: 600; }
+
+    .error-banner {
+      background: #7f1d1d;
+      border: 1px solid #ef4444;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏥 Kube-Health ER Dashboard</h1>
+  <span id="db-badge" class="badge">DB ONLINE</span>
+  <span class="last-updated" id="last-updated">—</span>
+</header>
+
+<main>
+  <div class="error-banner" id="error-banner"></div>
+
+  <!-- Stat cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="label">Active DB Connections</div>
+      <div class="value" id="stat-connections">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Insert Rate (req/s)</div>
+      <div class="value green" id="stat-rate">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Simulator Threads</div>
+      <div class="value amber" id="stat-threads">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Total Patients Inserted</div>
+      <div class="value" id="stat-total">—</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h2>Active DB Connections (10 min)</h2>
+      <canvas id="chart-connections" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>Insert Rate / sec (10 min)</h2>
+      <canvas id="chart-inserts" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>Postgres Replicas (HPA)</h2>
+      <canvas id="chart-replicas" height="200"></canvas>
+    </div>
+  </div>
+</main>
+
+<script>
+  const REFRESH_MS = 5000;
+
+  // ---- Chart factory ----
+  function makeChart(id, label, color) {
+    const ctx = document.getElementById(id).getContext('2d');
+    return new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label,
+          data: [],
+          borderColor: color,
+          backgroundColor: color + '22',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        animation: false,
+        scales: {
+          x: { display: false },
+          y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  const connChart    = makeChart('chart-connections', 'Active Connections', '#38bdf8');
+  const insertChart  = makeChart('chart-inserts',     'Inserts/sec',        '#22c55e');
+  const replicaChart = makeChart('chart-replicas',    'Replicas',           '#f59e0b');
+
+  // Replica chart gets two datasets
+  replicaChart.data.datasets.push({
+    label: 'Desired',
+    data: [],
+    borderColor: '#94a3b8',
+    borderDash: [4, 4],
+    borderWidth: 1.5,
+    pointRadius: 0,
+    tension: 0.3,
+    fill: false,
+  });
+
+  function updateChart(chart, seriesData, datasetIndex = 0) {
+    if (!seriesData || seriesData.length === 0) return;
+    chart.data.labels = seriesData.map(p => {
+      const d = new Date(p.ts * 1000);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    });
+    chart.data.datasets[datasetIndex].data = seriesData.map(p => p.value);
+    chart.update('none');
+  }
+
+  // ---- Fetch helpers ----
+  async function fetchMetrics() {
+    const r = await fetch('/api/metrics');
+    if (!r.ok) throw new Error(`/api/metrics ${r.status}`);
+    return r.json();
+  }
+
+  async function fetchHistory() {
+    const r = await fetch('/api/metrics/history');
+    if (!r.ok) throw new Error(`/api/metrics/history ${r.status}`);
+    return r.json();
+  }
+
+  async function fetchHPA() {
+    const r = await fetch('/api/hpa');
+    if (!r.ok) throw new Error(`/api/hpa ${r.status}`);
+    return r.json();
+  }
+
+  // ---- Refresh loop ----
+  async function refresh() {
+    const errBanner = document.getElementById('error-banner');
+    try {
+      const [metrics, history, hpa] = await Promise.all([fetchMetrics(), fetchHistory(), fetchHPA()]);
+
+      // Stat cards
+      document.getElementById('stat-connections').textContent = metrics.active_connections ?? '—';
+      document.getElementById('stat-rate').textContent =
+        metrics.insert_rate_per_sec != null ? metrics.insert_rate_per_sec.toFixed(1) : '—';
+      document.getElementById('stat-threads').textContent = metrics.simulator_active_threads ?? '—';
+      document.getElementById('stat-total').textContent =
+        metrics.inserts_total != null ? Math.round(metrics.inserts_total).toLocaleString() : '—';
+
+      // DB badge
+      const badge = document.getElementById('db-badge');
+      if (metrics.db_up) {
+        badge.textContent = 'DB ONLINE';
+        badge.className = 'badge';
+      } else {
+        badge.textContent = 'DB OFFLINE';
+        badge.className = 'badge offline';
+      }
+
+      // Charts
+      updateChart(connChart, history.active_connections);
+      updateChart(insertChart, history.insert_rate);
+      updateChart(replicaChart, hpa.current_replicas, 0);
+      updateChart(replicaChart, hpa.desired_replicas, 1);
+
+      document.getElementById('last-updated').textContent =
+        'Updated ' + new Date().toLocaleTimeString();
+
+      errBanner.style.display = 'none';
+    } catch (err) {
+      errBanner.textContent = '⚠ ' + err.message;
+      errBanner.style.display = 'block';
+    }
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>

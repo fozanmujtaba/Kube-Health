@@ -1,0 +1,98 @@
+# =============================================================================
+# load-simulator-deployment.yaml — ER Traffic Load Simulator
+# =============================================================================
+# Simulates incoming ER patient registrations by inserting rows into the
+# er_patients table. Three modes are supported:
+#   normal   — 5 threads × 1 insert/sec (baseline traffic)
+#   spike    — 50 threads × 10 inserts/sec (stress test, triggers HPA scale-up)
+#   cooldown — transitions from spike back to normal over 60 seconds
+#
+# The simulator also exposes its own Prometheus metrics on port 8080
+# so the Prometheus scrape job can track insert rate and active threads.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-simulator
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: load-simulator
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: kube-health
+      component: load-simulator
+
+  template:
+    metadata:
+      labels:
+        app: kube-health
+        component: load-simulator
+    spec:
+      containers:
+        - name: load-simulator
+          image: kube-health/load-simulator:latest
+          imagePullPolicy: IfNotPresent
+
+          args:
+            - "--mode"
+            - "normal"
+            - "--port"
+            - "8080"
+
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: metrics
+
+          # Database connection — pulls credentials from the same secret as postgres.
+          env:
+            - name: DB_HOST
+              value: "postgres-service.kube-health.svc.cluster.local"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+
+          # Readiness: simulator is ready when its /metrics endpoint responds.
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3

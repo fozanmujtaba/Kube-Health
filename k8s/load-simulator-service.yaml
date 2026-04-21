@@ -1,0 +1,25 @@
+# =============================================================================
+# load-simulator-service.yaml — ClusterIP service for the load simulator
+# =============================================================================
+# Exposes the simulator's Prometheus metrics endpoint inside the cluster
+# so the Prometheus scrape job (job_name: load-simulator) can reach it at:
+#   load-simulator-service.kube-health.svc.cluster.local:8080
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-simulator-service
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: load-simulator
+spec:
+  type: ClusterIP
+  selector:
+    app: kube-health
+    component: load-simulator
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080
+      protocol: TCP

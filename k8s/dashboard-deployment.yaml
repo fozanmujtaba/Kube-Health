@@ -1,0 +1,65 @@
+# =============================================================================
+# dashboard-deployment.yaml — Kube-Health ER Dashboard (FastAPI + static UI)
+# =============================================================================
+# The dashboard exposes a single-page app at port 5000. The backend queries
+# Prometheus for metrics and serves them as JSON to the frontend.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: dashboard
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: kube-health
+      component: dashboard
+
+  template:
+    metadata:
+      labels:
+        app: kube-health
+        component: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: kube-health/dashboard:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+              name: http
+
+          env:
+            - name: PROMETHEUS_URL
+              value: "http://prometheus-service.kube-health.svc.cluster.local:9090"
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
