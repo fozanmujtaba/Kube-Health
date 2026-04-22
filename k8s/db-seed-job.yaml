@@ -1,0 +1,51 @@
+# =============================================================================
+# db-seed-job.yaml — One-shot K8s Job that populates the ER patient dataset
+# =============================================================================
+# Run once after initial deployment:
+#   kubectl apply -f k8s/db-seed-job.yaml
+#   kubectl logs -n kube-health job/db-seed -f
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-seed
+  namespace: kube-health
+  labels:
+    app: kube-health
+    component: seed
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: kube-health/db-seed:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_HOST
+              value: "postgres-service.kube-health.svc.cluster.local"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

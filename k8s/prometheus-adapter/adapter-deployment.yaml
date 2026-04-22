@@ -90,13 +90,11 @@ spec:
         image: registry.k8s.io/prometheus-adapter/prometheus-adapter:v0.10.0
         imagePullPolicy: IfNotPresent
         args:
-        # Point to our internal Prometheus service
         - --prometheus-url=http://prometheus-service.kube-health.svc.cluster.local:9090
-        # Reference the mounted configmap that maps the metric
         - --config=/etc/adapter/config.yaml
         - --v=4
-        # Serve custom metrics API securely
         - --secure-port=6443
+        - --cert-dir=/tmp/certs
         ports:
         - containerPort: 6443
           name: https
@@ -104,10 +102,14 @@ spec:
         - mountPath: /etc/adapter/
           name: config
           readOnly: true
+        - mountPath: /tmp/certs
+          name: certs
       volumes:
       - name: config
         configMap:
           name: adapter-config
+      - name: certs
+        emptyDir: {}
 
 ---
 # 7. Service: Network endpoint for the adapter

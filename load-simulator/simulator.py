@@ -7,11 +7,20 @@ import psycopg2
 from faker import Faker
 from prometheus_client import start_http_server, Counter, Gauge
 
-# Prometheus metrics for the simulator itself
 metrics_inserts_total = Counter('simulator_inserts_total', 'Total number of patients inserted')
 metrics_active_threads = Gauge('simulator_active_threads', 'Current number of active simulation threads')
 
 fake = Faker()
+
+COMPLAINTS = {
+    1: ["Cardiac arrest", "Severe trauma", "Stroke / CVA", "Respiratory failure", "Anaphylaxis"],
+    2: ["Chest pain", "Shortness of breath", "Altered mental status", "Severe abdominal pain", "Overdose"],
+    3: ["Abdominal pain", "Back pain", "Headache", "Persistent vomiting", "High fever", "Minor fracture"],
+    4: ["Sprain / strain", "Minor laceration", "Ear pain", "UTI symptoms", "Rash", "Dental pain"],
+    5: ["Cold / flu symptoms", "Sore throat", "Minor bruising", "Insect bite", "Anxiety / panic attack"],
+}
+WAIT_RANGES = {1: (0, 5), 2: (5, 20), 3: (20, 60), 4: (60, 150), 5: (120, 300)}
+GENDERS = ["M", "F", "F", "M", "F", "M", "Other"]
 
 class SimState:
     """Holds shared state for the worker threads so rate can be dynamically adjusted."""
@@ -63,10 +72,20 @@ def worker(stop_event, state):
                         severity = random.randint(1, 5)
 
                         # Insert a new patient into er_patients
+                        age = random.choices(
+                            range(18, 91),
+                            weights=[2 if a < 40 or a > 65 else 1 for a in range(18, 91)]
+                        )[0]
+                        wait_min = random.randint(*WAIT_RANGES[severity])
                         cur.execute(
-                            "INSERT INTO er_patients (patient_name, arrival_time, severity, status) "
-                            "VALUES (%s, NOW(), %s, 'waiting')",
-                            (patient_name, severity)
+                            """INSERT INTO er_patients
+                               (patient_name, arrival_time, severity, status,
+                                age, gender, chief_complaint, wait_time_minutes)
+                               VALUES (%s, NOW(), %s, 'waiting', %s, %s, %s, %s)""",
+                            (patient_name, severity, age,
+                             random.choice(GENDERS),
+                             random.choice(COMPLAINTS[severity]),
+                             wait_min)
                         )
                         metrics_inserts_total.inc()
 

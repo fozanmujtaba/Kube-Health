@@ -9,877 +9,786 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg-0: #05070f;
-      --bg-1: #0a0e1f;
-      --bg-2: #111732;
-      --border: rgba(148, 163, 184, 0.08);
-      --border-strong: rgba(148, 163, 184, 0.18);
-      --text: #e2e8f0;
-      --text-dim: #94a3b8;
-      --text-muted: #64748b;
-
-      --cyan: #06b6d4;
-      --cyan-glow: rgba(6, 182, 212, 0.4);
-      --green: #10b981;
-      --green-glow: rgba(16, 185, 129, 0.4);
-      --amber: #f59e0b;
-      --amber-glow: rgba(245, 158, 11, 0.4);
-      --red: #ef4444;
-      --red-glow: rgba(239, 68, 68, 0.5);
-      --purple: #a855f7;
-      --purple-glow: rgba(168, 85, 247, 0.4);
+      --bg-0: #05070f; --bg-1: #0a0e1f; --bg-2: #111732;
+      --border: rgba(148,163,184,0.08); --border-s: rgba(148,163,184,0.18);
+      --text: #e2e8f0; --dim: #94a3b8; --muted: #64748b;
+      --cyan: #06b6d4; --cyan-g: rgba(6,182,212,0.4);
+      --green: #10b981; --green-g: rgba(16,185,129,0.4);
+      --amber: #f59e0b; --amber-g: rgba(245,158,11,0.4);
+      --red: #ef4444; --red-g: rgba(239,68,68,0.5);
+      --purple: #a855f7; --purple-g: rgba(168,85,247,0.4);
       --pink: #ec4899;
+      --sev1: #ef4444; --sev2: #f97316; --sev3: #f59e0b;
+      --sev4: #22c55e; --sev5: #3b82f6;
     }
+    html,body { height:100%; }
+    body { font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text); overflow-x:hidden; letter-spacing:-0.01em; }
 
-    html, body { height: 100%; }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg-0);
-      color: var(--text);
-      overflow-x: hidden;
-      letter-spacing: -0.01em;
-      font-weight: 400;
-    }
-
-    /* Animated background */
-    .bg-layer { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
-
+    /* Background */
+    .bg { position:fixed; inset:0; z-index:-1; overflow:hidden; }
     .bg-grid {
-      position: absolute; inset: 0;
-      background-image:
-        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+      position:absolute; inset:0;
+      background-image: linear-gradient(to right,rgba(148,163,184,.04) 1px,transparent 1px),
+                        linear-gradient(to bottom,rgba(148,163,184,.04) 1px,transparent 1px);
+      background-size:48px 48px;
+      mask-image:radial-gradient(ellipse at center,black 40%,transparent 80%);
     }
-
-    .bg-glow {
-      position: absolute; border-radius: 50%;
-      filter: blur(120px); opacity: 0.35; pointer-events: none;
-    }
-    .bg-glow.cyan   { width: 600px; height: 600px; background: var(--cyan);   top: -150px;    left: -100px;  animation: float 22s ease-in-out infinite; }
-    .bg-glow.purple { width: 500px; height: 500px; background: var(--purple); bottom: -100px; right: -100px; animation: float 28s ease-in-out infinite reverse; }
-    .bg-glow.pink   { width: 400px; height: 400px; background: var(--pink);   top: 40%;       left: 60%;     animation: float 30s ease-in-out infinite; opacity: 0.2; }
-
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33%      { transform: translate(80px, -60px) scale(1.1); }
-      66%      { transform: translate(-60px, 40px) scale(0.95); }
-    }
+    .bg-glow { position:absolute; border-radius:50%; filter:blur(120px); pointer-events:none; }
+    .bg-glow.c { width:600px;height:600px;background:var(--cyan);  top:-150px;left:-100px; opacity:.3; animation:float 22s ease-in-out infinite; }
+    .bg-glow.p { width:500px;height:500px;background:var(--purple);bottom:-100px;right:-100px;opacity:.3; animation:float 28s ease-in-out infinite reverse; }
+    .bg-glow.k { width:350px;height:350px;background:var(--pink);  top:40%;left:60%;      opacity:.15; animation:float 30s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(80px,-60px) scale(1.1)} 66%{transform:translate(-60px,40px) scale(.95)} }
 
     /* Header */
     header {
-      position: sticky; top: 0; z-index: 50;
-      padding: 1.2rem 2rem;
-      display: flex; align-items: center; gap: 1.2rem;
-      background: rgba(10, 14, 31, 0.7);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
+      position:sticky; top:0; z-index:50; padding:1rem 2rem;
+      display:flex; align-items:center; gap:1rem;
+      background:rgba(10,14,31,.75); backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
     }
-
-    .logo { display: flex; align-items: center; gap: 0.7rem; font-weight: 700; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .logo { display:flex; align-items:center; gap:.65rem; font-weight:700; font-size:1rem; letter-spacing:-.02em; }
     .logo-mark {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: linear-gradient(135deg, var(--cyan), var(--purple));
-      display: grid; place-items: center;
-      box-shadow: 0 0 30px var(--cyan-glow);
-      position: relative;
+      width:34px; height:34px; border-radius:9px;
+      background:linear-gradient(135deg,var(--cyan),var(--purple));
+      display:grid; place-items:center; box-shadow:0 0 28px var(--cyan-g); position:relative;
     }
-    .logo-mark::after { content: ""; position: absolute; inset: 2px; border-radius: 8px; background: var(--bg-1); }
-    .logo-mark svg { position: relative; z-index: 1; }
-    .logo-text { display: flex; flex-direction: column; line-height: 1.1; }
-    .logo-text span:last-child {
-      font-size: 0.65rem; font-weight: 500; color: var(--text-dim);
-      letter-spacing: 0.12em; text-transform: uppercase;
+    .logo-mark::after { content:""; position:absolute; inset:2px; border-radius:7px; background:var(--bg-1); }
+    .logo-mark svg { position:relative; z-index:1; }
+    .logo-sub { display:flex; flex-direction:column; line-height:1.1; }
+    .logo-sub span:last-child { font-size:.62rem; font-weight:500; color:var(--dim); letter-spacing:.12em; text-transform:uppercase; }
+    .hdr-r { margin-left:auto; display:flex; align-items:center; gap:1rem; }
+    .pill {
+      display:flex; align-items:center; gap:.4rem; padding:.35rem .75rem;
+      background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.25);
+      border-radius:100px; font-size:.72rem; font-weight:600; color:var(--green); letter-spacing:.04em; transition:all .4s;
     }
+    .pill.off { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.3); color:var(--red); }
+    .dot { width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 10px var(--green-g); animation:pdot 1.6s ease-in-out infinite; }
+    .pill.off .dot { background:var(--red); box-shadow:0 0 10px var(--red-g); }
+    @keyframes pdot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.3);opacity:.7} }
+    .clock { font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--dim); letter-spacing:.05em; }
 
-    .header-status { margin-left: auto; display: flex; align-items: center; gap: 1.2rem; }
-
-    .status-pill {
-      display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.4rem 0.85rem;
-      background: rgba(16, 185, 129, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      border-radius: 100px;
-      font-size: 0.75rem; font-weight: 600; color: var(--green);
-      letter-spacing: 0.04em; transition: all 0.4s;
+    /* Nav tabs */
+    .tabs { display:flex; gap:.25rem; padding:.75rem 2rem 0; border-bottom:1px solid var(--border); background:rgba(10,14,31,.4); backdrop-filter:blur(10px); }
+    .tab {
+      padding:.5rem 1rem; font-size:.8rem; font-weight:600; color:var(--dim);
+      border-radius:8px 8px 0 0; border:1px solid transparent; border-bottom:none;
+      cursor:pointer; transition:all .2s; letter-spacing:-.01em;
     }
+    .tab:hover { color:var(--text); }
+    .tab.active { color:#fff; background:var(--bg-2); border-color:var(--border); }
 
-    .status-pill.offline {
-      background: rgba(239, 68, 68, 0.08);
-      border-color: rgba(239, 68, 68, 0.3);
-      color: var(--red);
+    /* Main */
+    main { padding:1.5rem 2rem; max-width:1600px; margin:0 auto; }
+    .page { display:none; }
+    .page.active { display:block; }
+
+    /* Section heading */
+    .sec-head { margin-bottom:1rem; }
+    .sec-head h2 { font-size:1.5rem; font-weight:800; letter-spacing:-.03em; background:linear-gradient(135deg,#fff,#94a3b8); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+    .sec-head p { color:var(--dim); font-size:.88rem; margin-top:.2rem; }
+
+    /* Panels */
+    .panel {
+      position:relative; padding:1.4rem;
+      background:linear-gradient(180deg,rgba(17,23,50,.55),rgba(10,14,31,.55));
+      border:1px solid var(--border); border-radius:14px; backdrop-filter:blur(8px);
+      overflow:hidden;
     }
-
-    .status-dot {
-      width: 8px; height: 8px;
-      background: var(--green); border-radius: 50%;
-      box-shadow: 0 0 10px var(--green-glow);
-      animation: pulse-dot 1.6s ease-in-out infinite;
+    .panel-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+    .panel-title { font-size:.82rem; font-weight:600; color:#fff; }
+    .panel-sub { font-size:.68rem; color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:.05em; margin-top:.15rem; }
+    .live-tag {
+      display:inline-flex; align-items:center; gap:.3rem; padding:.12rem .5rem;
+      font-size:.62rem; font-weight:700; letter-spacing:.1em; color:var(--red);
+      background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); border-radius:5px;
     }
-    .status-pill.offline .status-dot { background: var(--red); box-shadow: 0 0 10px var(--red-glow); }
-
-    @keyframes pulse-dot {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50%      { transform: scale(1.3); opacity: 0.7; }
-    }
-
-    .clock {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem; color: var(--text-dim); letter-spacing: 0.05em;
-    }
-
-    main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
-
-    .hero { margin-bottom: 2rem; }
-    .hero h1 {
-      font-size: 2.4rem; font-weight: 800; letter-spacing: -0.04em;
-      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 0.3rem;
-    }
-    .hero p { color: var(--text-dim); font-size: 0.95rem; }
+    .live-tag::before { content:""; width:5px; height:5px; border-radius:50%; background:var(--red); animation:pdot 1.3s infinite; }
 
     /* Metric cards */
-    .metric-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 1rem; margin-bottom: 1.5rem;
-    }
-
+    .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.85rem; margin-bottom:1rem; }
     .metric-card {
-      position: relative; padding: 1.3rem;
-      background: linear-gradient(180deg, rgba(17, 23, 50, 0.6) 0%, rgba(10, 14, 31, 0.6) 100%);
-      border: 1px solid var(--border);
-      border-radius: 16px; overflow: hidden;
-      transition: transform 0.25s, border-color 0.25s;
+      position:relative; padding:1.2rem;
+      background:linear-gradient(180deg,rgba(17,23,50,.6),rgba(10,14,31,.6));
+      border:1px solid var(--border); border-radius:14px; overflow:hidden;
+      transition:transform .2s,border-color .2s;
     }
-
-    .metric-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
-
+    .metric-card:hover { transform:translateY(-2px); border-color:var(--border-s); }
     .metric-card::before {
-      content: ""; position: absolute; top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--accent, var(--cyan)), transparent);
-      opacity: 0.6;
+      content:""; position:absolute; top:0; left:0; right:0; height:1px;
+      background:linear-gradient(90deg,transparent,var(--ac,var(--cyan)),transparent); opacity:.6;
     }
-
     .metric-card::after {
-      content: ""; position: absolute; top: -50%; right: -30%;
-      width: 200px; height: 200px;
-      background: radial-gradient(circle, var(--accent-glow, var(--cyan-glow)), transparent 70%);
-      opacity: 0.15; pointer-events: none;
+      content:""; position:absolute; top:-50%; right:-30%; width:180px; height:180px;
+      background:radial-gradient(circle,var(--ac-g,var(--cyan-g)),transparent 70%); opacity:.12; pointer-events:none;
     }
+    .metric-card[data-ac="g"]  { --ac:var(--green);  --ac-g:var(--green-g); }
+    .metric-card[data-ac="a"]  { --ac:var(--amber);  --ac-g:var(--amber-g); }
+    .metric-card[data-ac="p"]  { --ac:var(--purple); --ac-g:var(--purple-g); }
+    .metric-card[data-ac="r"]  { --ac:var(--red);    --ac-g:var(--red-g); }
+    .mlabel { font-size:.68rem; font-weight:600; color:var(--dim); text-transform:uppercase; letter-spacing:.1em; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem; }
+    .mval { font-family:'JetBrains Mono',monospace; font-size:2.1rem; font-weight:700; line-height:1; letter-spacing:-.03em; color:#fff; display:flex; align-items:baseline; gap:.25rem; }
+    .mval .u { font-size:.8rem; font-weight:500; color:var(--dim); }
+    .mdelta { margin-top:.5rem; font-size:.68rem; color:var(--muted); font-family:'JetBrains Mono',monospace; }
 
-    .metric-card[data-accent="green"]  { --accent: var(--green);  --accent-glow: var(--green-glow); }
-    .metric-card[data-accent="amber"]  { --accent: var(--amber);  --accent-glow: var(--amber-glow); }
-    .metric-card[data-accent="purple"] { --accent: var(--purple); --accent-glow: var(--purple-glow); }
-
-    .metric-label {
-      display: flex; align-items: center; gap: 0.45rem;
-      font-size: 0.72rem; font-weight: 600; color: var(--text-dim);
-      text-transform: uppercase; letter-spacing: 0.1em;
-      margin-bottom: 0.9rem;
-    }
-
-    .metric-icon {
-      width: 24px; height: 24px; border-radius: 6px;
-      background: rgba(255, 255, 255, 0.04);
-      display: grid; place-items: center;
-      color: var(--accent, var(--cyan));
-    }
-
-    .metric-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 2.3rem; font-weight: 700; line-height: 1;
-      letter-spacing: -0.03em; color: #fff;
-      display: flex; align-items: baseline; gap: 0.3rem;
-    }
-    .metric-value .unit { font-size: 0.85rem; font-weight: 500; color: var(--text-dim); }
-
-    .metric-delta {
-      margin-top: 0.6rem; font-size: 0.72rem; color: var(--text-muted);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Big grid */
-    .big-grid {
-      display: grid; grid-template-columns: 2fr 1fr;
-      gap: 1rem; margin-bottom: 1rem;
-    }
-
-    .panel {
-      position: relative; padding: 1.5rem;
-      background: linear-gradient(180deg, rgba(17, 23, 50, 0.5) 0%, rgba(10, 14, 31, 0.5) 100%);
-      border: 1px solid var(--border);
-      border-radius: 16px; overflow: hidden;
-      backdrop-filter: blur(10px);
-    }
-
-    .panel-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 1.2rem;
-    }
-
-    .panel-title { font-size: 0.85rem; font-weight: 600; color: #fff; letter-spacing: -0.01em; }
-    .panel-sub {
-      font-size: 0.7rem; color: var(--text-muted);
-      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
-    }
-
-    .live-badge {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      padding: 0.15rem 0.55rem; font-size: 0.65rem;
-      font-weight: 700; letter-spacing: 0.1em;
-      color: var(--red);
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      border-radius: 6px;
-    }
-    .live-badge::before {
-      content: ""; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--red); animation: pulse-dot 1.3s infinite;
-    }
+    /* Grids */
+    .g2 { display:grid; grid-template-columns:2fr 1fr; gap:.85rem; margin-bottom:.85rem; }
+    .g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:.85rem; margin-bottom:.85rem; }
+    .g2e { display:grid; grid-template-columns:1fr 1fr; gap:.85rem; margin-bottom:.85rem; }
 
     /* ECG */
-    .ecg-container { position: relative; height: 280px; }
-    .ecg-svg { width: 100%; height: 100%; }
-    .ecg-path {
-      fill: none; stroke: url(#ecg-gradient); stroke-width: 2;
-      filter: drop-shadow(0 0 6px var(--green-glow));
-    }
-    .ecg-fill { fill: url(#ecg-fill-gradient); opacity: 0.35; }
-    .ecg-pulse { fill: var(--green); filter: drop-shadow(0 0 10px var(--green)); }
-    .ecg-grid line { stroke: rgba(148, 163, 184, 0.06); stroke-width: 1; }
+    .ecg-wrap { position:relative; height:260px; }
+    .ecg-svg { width:100%; height:100%; }
+    .ecg-path { fill:none; stroke:url(#ecg-gr); stroke-width:2; filter:drop-shadow(0 0 5px var(--green-g)); }
+    .ecg-fill { fill:url(#ecg-fill-gr); opacity:.3; }
+    .ecg-dot  { fill:var(--green); filter:drop-shadow(0 0 8px var(--green)); }
+    .ecg-grid-line { stroke:rgba(148,163,184,.05); stroke-width:1; }
 
-    /* Pods */
-    .pod-viz { display: flex; flex-direction: column; gap: 1.2rem; }
-    .pod-count-display { display: flex; align-items: baseline; gap: 0.5rem; font-family: 'JetBrains Mono', monospace; }
-    .pod-count-display .num { font-size: 3.5rem; font-weight: 700; line-height: 1; color: #fff; letter-spacing: -0.04em; }
-    .pod-count-display .slash { color: var(--text-muted); font-size: 1.8rem; }
-    .pod-count-display .max { font-size: 1.4rem; color: var(--text-dim); font-weight: 500; }
-
-    .pod-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-
+    /* Pod grid */
+    .pod-count { display:flex; align-items:baseline; gap:.4rem; font-family:'JetBrains Mono',monospace; margin-bottom:.75rem; }
+    .pod-count .n { font-size:3rem; font-weight:700; line-height:1; color:#fff; letter-spacing:-.04em; }
+    .pod-count .s { color:var(--muted); font-size:1.6rem; }
+    .pod-count .m { font-size:1.2rem; color:var(--dim); font-weight:500; }
+    .pod-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
     .pod {
-      aspect-ratio: 1; border-radius: 10px; position: relative;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border);
-      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-      overflow: hidden;
+      aspect-ratio:1; border-radius:8px; position:relative;
+      background:rgba(255,255,255,.02); border:1px solid var(--border);
+      transition:all .5s cubic-bezier(.34,1.56,.64,1); overflow:hidden;
     }
-
-    .pod.active {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(168, 85, 247, 0.1));
-      border-color: var(--cyan);
-      box-shadow: 0 0 20px var(--cyan-glow), inset 0 0 15px rgba(6, 182, 212, 0.1);
+    .pod.on {
+      background:linear-gradient(135deg,rgba(6,182,212,.15),rgba(168,85,247,.1));
+      border-color:var(--cyan); box-shadow:0 0 18px var(--cyan-g),inset 0 0 12px rgba(6,182,212,.08);
     }
-
-    .pod.active::before {
-      content: ""; position: absolute; inset: 3px; border-radius: 7px;
-      background:
-        radial-gradient(circle at 30% 30%, var(--cyan), transparent 60%),
-        radial-gradient(circle at 70% 80%, var(--purple), transparent 60%);
-      opacity: 0.5; animation: pod-pulse 2.5s ease-in-out infinite;
+    .pod.on::before {
+      content:""; position:absolute; inset:3px; border-radius:5px;
+      background:radial-gradient(circle at 30% 30%,var(--cyan),transparent 60%),
+                 radial-gradient(circle at 70% 80%,var(--purple),transparent 60%);
+      opacity:.45; animation:pp 2.5s ease-in-out infinite;
     }
+    .pod.on::after { content:"▸"; position:absolute; inset:0; display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:.65rem; font-weight:700; color:var(--cyan); text-shadow:0 0 8px var(--cyan); }
+    @keyframes pp { 0%,100%{opacity:.35} 50%{opacity:.65} }
+    .pod.new { animation:pspawn .6s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes pspawn { 0%{transform:scale(.5);opacity:0} 100%{transform:scale(1);opacity:1} }
+    .pod-leg { display:flex; gap:.75rem; font-size:.68rem; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:.6rem; }
 
-    .pod.active::after {
-      content: "▸"; position: absolute; inset: 0; display: grid; place-items: center;
-      font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
-      color: var(--cyan); text-shadow: 0 0 8px var(--cyan);
-    }
+    /* Charts */
+    canvas { width:100%!important; }
 
-    .pod.pending {
-      animation: pod-spawn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-      border-color: var(--amber);
-      background: rgba(245, 158, 11, 0.05);
-    }
+    /* Severity bars */
+    .sev-bars { display:flex; flex-direction:column; gap:.55rem; }
+    .sev-row { display:flex; align-items:center; gap:.7rem; }
+    .sev-label { font-size:.72rem; font-weight:600; width:70px; flex-shrink:0; font-family:'JetBrains Mono',monospace; }
+    .sev-bar-wrap { flex:1; height:22px; background:rgba(255,255,255,.04); border-radius:5px; overflow:hidden; }
+    .sev-bar { height:100%; border-radius:5px; transition:width .8s cubic-bezier(.4,0,.2,1); display:flex; align-items:center; padding-left:.5rem; font-size:.65rem; font-weight:700; color:rgba(0,0,0,.7); }
+    .sev-count { font-size:.72rem; font-family:'JetBrains Mono',monospace; color:var(--dim); width:55px; text-align:right; flex-shrink:0; }
+    .sev1 { background:var(--sev1); } .sev2 { background:var(--sev2); }
+    .sev3 { background:var(--sev3); } .sev4 { background:var(--sev4); }
+    .sev5 { background:var(--sev5); }
 
-    @keyframes pod-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
-    @keyframes pod-spawn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    /* Status donuts */
+    .donut-wrap { display:flex; align-items:center; gap:1.5rem; padding:.5rem 0; }
+    .donut-legend { display:flex; flex-direction:column; gap:.6rem; }
+    .dl-row { display:flex; align-items:center; gap:.5rem; font-size:.78rem; }
+    .dl-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .dl-val { font-family:'JetBrains Mono',monospace; font-weight:700; color:#fff; margin-left:auto; padding-left:.75rem; }
 
-    .pod-legend { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+    /* Complaints */
+    .comp-list { display:flex; flex-direction:column; gap:.45rem; }
+    .comp-row { display:flex; align-items:center; gap:.6rem; }
+    .comp-name { font-size:.75rem; color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .comp-bar-wrap { width:120px; height:8px; background:rgba(255,255,255,.05); border-radius:4px; overflow:hidden; flex-shrink:0; }
+    .comp-bar { height:100%; background:linear-gradient(90deg,var(--cyan),var(--purple)); border-radius:4px; transition:width .8s; }
+    .comp-count { font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--dim); width:40px; text-align:right; flex-shrink:0; }
 
-    /* Charts row */
-    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    /* Patient table */
+    .pt-table { width:100%; border-collapse:collapse; font-size:.75rem; }
+    .pt-table th { text-align:left; padding:.5rem .75rem; font-size:.65rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; border-bottom:1px solid var(--border); }
+    .pt-table td { padding:.55rem .75rem; border-bottom:1px solid rgba(148,163,184,.04); color:var(--text); }
+    .pt-table tr:last-child td { border-bottom:none; }
+    .pt-table tr:hover td { background:rgba(255,255,255,.02); }
+    .sev-badge { display:inline-block; padding:.15rem .4rem; border-radius:4px; font-size:.65rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
+    .s1{background:rgba(239,68,68,.15);color:var(--sev1);}
+    .s2{background:rgba(249,115,22,.15);color:var(--sev2);}
+    .s3{background:rgba(245,158,11,.15);color:var(--sev3);}
+    .s4{background:rgba(34,197,94,.15);color:var(--sev4);}
+    .s5{background:rgba(59,130,246,.15);color:var(--sev5);}
+    .st-pill { display:inline-block; padding:.15rem .45rem; border-radius:100px; font-size:.65rem; font-weight:600; }
+    .st-wait { background:rgba(245,158,11,.12); color:var(--amber); }
+    .st-treat { background:rgba(6,182,212,.12); color:var(--cyan); }
+    .st-disc { background:rgba(16,185,129,.12); color:var(--green); }
 
-    canvas { width: 100% !important; height: 200px !important; }
-
-    /* Events */
-    .event-feed { max-height: 200px; overflow-y: auto; padding-right: 0.5rem; }
-    .event-feed::-webkit-scrollbar { width: 6px; }
-    .event-feed::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
-    .event-feed::-webkit-scrollbar-track { background: transparent; }
-
-    .event {
-      display: flex; align-items: center; gap: 0.8rem;
-      padding: 0.7rem 0;
-      border-bottom: 1px dashed var(--border);
-      animation: event-in 0.4s ease-out;
-    }
-    .event:last-child { border-bottom: none; }
-    @keyframes event-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-
-    .event-icon {
-      width: 28px; height: 28px; border-radius: 8px;
-      display: grid; place-items: center; flex-shrink: 0;
-    }
-    .event-icon.up    { background: rgba(16, 185, 129, 0.1); color: var(--green); }
-    .event-icon.down  { background: rgba(168, 85, 247, 0.1); color: var(--purple); }
-    .event-icon.warn  { background: rgba(245, 158, 11, 0.1); color: var(--amber); }
-    .event-icon.info  { background: rgba(6, 182, 212, 0.1);  color: var(--cyan); }
-
-    .event-body { flex: 1; min-width: 0; }
-    .event-msg { font-size: 0.8rem; color: var(--text); font-weight: 500; }
-    .event-time { font-size: 0.68rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+    /* HPA board */
+    .hpa-row { display:flex; justify-content:space-between; font-size:.8rem; padding:.35rem 0; border-bottom:1px solid var(--border); }
+    .hpa-row:last-child { border:none; }
+    .hpa-row span:first-child { color:var(--dim); }
+    .hpa-row span:last-child { font-family:'JetBrains Mono',monospace; font-weight:700; }
 
     /* Gauge */
-    .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; padding: 1rem 0; }
-    .gauge-value { font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; font-weight: 700; color: #fff; letter-spacing: -0.04em; line-height: 1; }
-    .gauge-value .unit { font-size: 0.9rem; color: var(--text-dim); margin-left: 0.2rem; }
+    .gauge-wrap { display:flex; flex-direction:column; align-items:center; gap:.7rem; padding:.75rem 0; }
+    .gauge-val { font-family:'JetBrains Mono',monospace; font-size:2.3rem; font-weight:700; color:#fff; line-height:1; letter-spacing:-.04em; }
+    .gauge-val .u { font-size:.85rem; color:var(--dim); margin-left:.2rem; }
+    .gauge-bar { width:100%; height:7px; background:rgba(148,163,184,.08); border-radius:4px; overflow:hidden; }
+    .gauge-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--purple)); border-radius:4px; transition:width .6s; box-shadow:0 0 10px var(--cyan-g); }
+    .gauge-scale { display:flex; justify-content:space-between; width:100%; font-size:.62rem; color:var(--muted); font-family:'JetBrains Mono',monospace; }
 
-    .gauge-bar {
-      width: 100%; height: 8px;
-      background: rgba(148, 163, 184, 0.08);
-      border-radius: 4px; overflow: hidden; position: relative;
-    }
-    .gauge-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--cyan), var(--purple));
-      border-radius: 4px;
-      transition: width 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
-      box-shadow: 0 0 12px var(--cyan-glow);
-    }
+    /* Events */
+    .event-feed { max-height:220px; overflow-y:auto; padding-right:.4rem; }
+    .event-feed::-webkit-scrollbar { width:5px; }
+    .event-feed::-webkit-scrollbar-thumb { background:var(--border-s); border-radius:3px; }
+    .event { display:flex; align-items:center; gap:.7rem; padding:.6rem 0; border-bottom:1px dashed var(--border); animation:ein .4s; }
+    .event:last-child { border:none; }
+    @keyframes ein { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
+    .eicon { width:26px; height:26px; border-radius:7px; display:grid; place-items:center; flex-shrink:0; }
+    .eicon.up   { background:rgba(16,185,129,.1); color:var(--green); }
+    .eicon.down { background:rgba(168,85,247,.1); color:var(--purple); }
+    .eicon.warn { background:rgba(245,158,11,.1); color:var(--amber); }
+    .eicon.info { background:rgba(6,182,212,.1);  color:var(--cyan); }
+    .emsg  { font-size:.78rem; color:var(--text); font-weight:500; }
+    .etime { font-size:.65rem; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-top:1px; }
 
-    .gauge-scale {
-      display: flex; justify-content: space-between; width: 100%;
-      font-size: 0.65rem; color: var(--text-muted);
-      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
-    }
-
-    /* HPA board rows */
-    .hpa-row { display: flex; justify-content: space-between; font-size: 0.8rem; }
-    .hpa-row span:first-child { color: var(--text-dim); }
-    .hpa-row span:last-child { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+    /* Error */
+    .err { display:none; padding:.7rem 1rem; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3); border-radius:9px; color:#fca5a5; font-size:.78rem; margin-bottom:1rem; font-family:'JetBrains Mono',monospace; }
 
     /* Footer */
-    footer {
-      margin-top: 2rem; padding: 1.5rem 0;
-      text-align: center; font-size: 0.72rem;
-      color: var(--text-muted);
-      border-top: 1px solid var(--border);
-      letter-spacing: 0.05em;
-    }
-    footer .signature {
-      background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink));
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-weight: 700; letter-spacing: 0.1em;
-    }
+    footer { margin-top:2rem; padding:1.2rem 0; text-align:center; font-size:.7rem; color:var(--muted); border-top:1px solid var(--border); letter-spacing:.05em; }
+    .sig { background:linear-gradient(90deg,var(--cyan),var(--purple),var(--pink)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; font-weight:700; letter-spacing:.1em; }
 
-    /* Error banner */
-    .error-banner {
-      display: none; padding: 0.8rem 1rem;
-      background: rgba(239, 68, 68, 0.08);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 10px; color: #fca5a5;
-      font-size: 0.8rem; margin-bottom: 1rem;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    @media (max-width: 1100px) {
-      .metric-grid { grid-template-columns: repeat(2, 1fr); }
-      .big-grid    { grid-template-columns: 1fr; }
-      .chart-row   { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 600px) {
-      main { padding: 1rem; }
-      .hero h1 { font-size: 1.7rem; }
-      .metric-grid { grid-template-columns: 1fr; }
-    }
+    @media(max-width:1100px) { .metric-grid{grid-template-columns:repeat(2,1fr)} .g2,.g3,.g2e{grid-template-columns:1fr} }
+    @media(max-width:600px)  { main{padding:1rem} .metric-grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
 
-<div class="bg-layer">
+<div class="bg">
   <div class="bg-grid"></div>
-  <div class="bg-glow cyan"></div>
-  <div class="bg-glow purple"></div>
-  <div class="bg-glow pink"></div>
+  <div class="bg-glow c"></div>
+  <div class="bg-glow p"></div>
+  <div class="bg-glow k"></div>
 </div>
 
 <header>
   <div class="logo">
     <div class="logo-mark">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2L14.5 9H22L16 13.5L18 21L12 17L6 21L8 13.5L2 9H9.5L12 2Z" fill="url(#lg-grad)" />
-        <defs>
-          <linearGradient id="lg-grad" x1="0" y1="0" x2="24" y2="24">
-            <stop offset="0%"  stop-color="#06b6d4" />
-            <stop offset="100%" stop-color="#a855f7" />
-          </linearGradient>
-        </defs>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L14.5 9H22L16 13.5L18 21L12 17L6 21L8 13.5L2 9H9.5Z" fill="url(#lg)"/>
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24">
+          <stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#a855f7"/>
+        </linearGradient></defs>
       </svg>
     </div>
-    <div class="logo-text">
+    <div class="logo-sub">
       <span>Kube-Health</span>
       <span>ER · OPS CENTER</span>
     </div>
   </div>
-
-  <div class="header-status">
+  <div class="hdr-r">
     <span class="clock" id="clock">—</span>
-    <div class="status-pill" id="db-badge">
-      <span class="status-dot"></span>
-      <span id="db-badge-text">SYSTEMS NOMINAL</span>
+    <div class="pill" id="db-pill">
+      <span class="dot"></span>
+      <span id="db-txt">SYSTEMS NOMINAL</span>
     </div>
   </div>
 </header>
 
+<!-- Nav tabs -->
+<div class="tabs">
+  <div class="tab active" data-tab="ops">⚡ Live Operations</div>
+  <div class="tab" data-tab="patients">🏥 Patient Analytics</div>
+  <div class="tab" data-tab="infra">🛰️ Infrastructure</div>
+</div>
+
 <main>
+  <div class="err" id="err"></div>
 
-  <section class="hero">
-    <h1>Emergency Room Operations</h1>
-    <p>Real-time monitoring · PostgreSQL cluster · HPA-driven autoscaling</p>
-  </section>
+  <!-- ============================================================
+       PAGE 1 — LIVE OPERATIONS
+       ============================================================ -->
+  <div class="page active" id="pg-ops">
 
-  <div class="error-banner" id="error-banner"></div>
-
-  <section class="metric-grid">
-
-    <div class="metric-card" data-accent="cyan">
-      <div class="metric-label">
-        <span class="metric-icon">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a2 2 0 110 4 2 2 0 010-4zm0 12c-2.5 0-4.7-1.3-6-3.2.1-2 4-3.1 6-3.1s5.9 1.1 6 3.1c-1.3 1.9-3.5 3.2-6 3.2z"/></svg>
-        </span>
-        Active Connections
-      </div>
-      <div class="metric-value"><span id="stat-connections">—</span></div>
-      <div class="metric-delta">LIVE · pg_stat_activity</div>
+    <div class="sec-head" style="margin-bottom:.85rem;">
+      <h2>Live Operations</h2>
+      <p>Real-time ER activity · PostgreSQL cluster · HPA autoscaling</p>
     </div>
 
-    <div class="metric-card" data-accent="green">
-      <div class="metric-label">
-        <span class="metric-icon">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        </span>
-        Patient Intake Rate
+    <section class="metric-grid">
+      <div class="metric-card">
+        <div class="mlabel">Active Connections</div>
+        <div class="mval"><span id="mc-conn">—</span></div>
+        <div class="mdelta">pg_stat_activity · LIVE</div>
       </div>
-      <div class="metric-value">
-        <span id="stat-rate">—</span><span class="unit">/ sec</span>
+      <div class="metric-card" data-ac="g">
+        <div class="mlabel">Patient Intake Rate</div>
+        <div class="mval"><span id="mc-rate">—</span><span class="u">/sec</span></div>
+        <div class="mdelta">simulator_inserts_total[1m]</div>
       </div>
-      <div class="metric-delta">rate(simulator_inserts_total[1m])</div>
-    </div>
-
-    <div class="metric-card" data-accent="amber">
-      <div class="metric-label">
-        <span class="metric-icon">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </span>
-        Simulator Threads
+      <div class="metric-card" data-ac="a">
+        <div class="mlabel">Simulator Threads</div>
+        <div class="mval"><span id="mc-threads">—</span></div>
+        <div class="mdelta">active worker processes</div>
       </div>
-      <div class="metric-value"><span id="stat-threads">—</span></div>
-      <div class="metric-delta">active worker processes</div>
-    </div>
-
-    <div class="metric-card" data-accent="purple">
-      <div class="metric-label">
-        <span class="metric-icon">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v10M4 7v10l8 4"/></svg>
-        </span>
-        Total Patients
+      <div class="metric-card" data-ac="p">
+        <div class="mlabel">Total Patients</div>
+        <div class="mval"><span id="mc-total">—</span></div>
+        <div class="mdelta">cumulative inserts</div>
       </div>
-      <div class="metric-value"><span id="stat-total">—</span></div>
-      <div class="metric-delta">cumulative inserts since boot</div>
-    </div>
+    </section>
 
-  </section>
-
-  <section class="big-grid">
-
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title">🫀 Patient Intake Waveform</div>
-          <div class="panel-sub">inserts per second · last 10 min</div>
+    <div class="g2">
+      <!-- ECG waveform -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <div><div class="panel-title">🫀 Patient Intake Waveform</div><div class="panel-sub">inserts/sec · last 10 min</div></div>
+          <span class="live-tag">LIVE</span>
         </div>
-        <span class="live-badge">LIVE</span>
-      </div>
-
-      <div class="ecg-container">
-        <svg class="ecg-svg" id="ecg-svg" viewBox="0 0 800 280" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="ecg-gradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"  stop-color="#06b6d4" stop-opacity="0.2"/>
-              <stop offset="80%" stop-color="#10b981" stop-opacity="1"/>
-              <stop offset="100%" stop-color="#10b981" stop-opacity="1"/>
-            </linearGradient>
-            <linearGradient id="ecg-fill-gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"  stop-color="#10b981" stop-opacity="0.4"/>
-              <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-
-          <g class="ecg-grid" id="ecg-grid"></g>
-          <path class="ecg-fill" id="ecg-fill-path" d=""/>
-          <path class="ecg-path" id="ecg-main-path" d=""/>
-          <circle class="ecg-pulse" id="ecg-pulse" cx="0" cy="280" r="5"/>
-        </svg>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title">⚡ Postgres Replica Pods</div>
-          <div class="panel-sub">HPA-driven · min 2 / max 10</div>
+        <div class="ecg-wrap">
+          <svg class="ecg-svg" id="ecg" viewBox="0 0 800 260" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="ecg-gr" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#06b6d4" stop-opacity=".2"/>
+                <stop offset="85%" stop-color="#10b981" stop-opacity="1"/>
+              </linearGradient>
+              <linearGradient id="ecg-fill-gr" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#10b981" stop-opacity=".35"/>
+                <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g id="ecg-g"></g>
+            <path class="ecg-fill" id="ecg-fp" d=""/>
+            <path class="ecg-path" id="ecg-p"  d=""/>
+            <circle class="ecg-dot" id="ecg-dot" r="5" cx="0" cy="260"/>
+          </svg>
         </div>
       </div>
 
-      <div class="pod-viz">
-        <div class="pod-count-display">
-          <span class="num" id="pod-current">—</span>
-          <span class="slash">/</span>
-          <span class="max">10</span>
+      <!-- Pod visualization -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <div><div class="panel-title">⚡ Postgres Replicas</div><div class="panel-sub">HPA · min 2 / max 10</div></div>
+        </div>
+        <div class="pod-count">
+          <span class="n" id="pod-n">—</span><span class="s">/</span><span class="m">10</span>
         </div>
         <div class="pod-grid" id="pod-grid"></div>
-        <div class="pod-legend">
-          <span>▸ active</span>
-          <span>· idle</span>
-        </div>
+        <div class="pod-leg"><span>▸ active</span><span>· idle</span></div>
       </div>
     </div>
 
-  </section>
-
-  <section class="chart-row">
-
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title">📊 Replica Scaling History</div>
-          <div class="panel-sub">current vs desired replicas</div>
+    <div class="g2e">
+      <!-- Connection gauge -->
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">🧠 Connection Load / Pod</div><div class="panel-sub">avg vs HPA target (20 conn)</div></div></div>
+        <div class="gauge-wrap">
+          <div class="gauge-val"><span id="gauge-v">—</span><span class="u">conn/pod</span></div>
+          <div class="gauge-bar"><div class="gauge-fill" id="gauge-f" style="width:0%"></div></div>
+          <div class="gauge-scale"><span>0</span><span>TARGET 20</span><span>40+</span></div>
         </div>
       </div>
-      <canvas id="chart-replicas"></canvas>
-    </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title">🛰️ System Event Feed</div>
-          <div class="panel-sub">scale-up · scale-down · anomalies</div>
-        </div>
-      </div>
-      <div class="event-feed" id="event-feed">
-        <div class="event">
-          <div class="event-icon info">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          </div>
-          <div class="event-body">
-            <div class="event-msg">Awaiting first Prometheus scrape…</div>
-            <div class="event-time">INITIALIZING</div>
+      <!-- Event feed -->
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">🛰️ Event Feed</div><div class="panel-sub">scale-up · scale-down · alerts</div></div></div>
+        <div class="event-feed" id="event-feed">
+          <div class="event">
+            <div class="eicon info"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+            <div><div class="emsg">Awaiting Prometheus data…</div><div class="etime">INIT</div></div>
           </div>
         </div>
       </div>
     </div>
 
-  </section>
+  </div>
 
-  <section class="chart-row">
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title">🧠 Connection Pool Load</div>
-          <div class="panel-sub">per-replica average vs HPA target (20)</div>
+  <!-- ============================================================
+       PAGE 2 — PATIENT ANALYTICS
+       ============================================================ -->
+  <div class="page" id="pg-patients">
+
+    <div class="sec-head">
+      <h2>Patient Analytics</h2>
+      <p>50,000 patient records · real ER distributions · live updates every 5s</p>
+    </div>
+
+    <!-- Summary stats row -->
+    <section class="metric-grid" style="grid-template-columns:repeat(4,1fr);">
+      <div class="metric-card" data-ac="r">
+        <div class="mlabel">Total Patients</div>
+        <div class="mval"><span id="ps-total">—</span></div>
+        <div class="mdelta">all time</div>
+      </div>
+      <div class="metric-card" data-ac="a">
+        <div class="mlabel">Currently Waiting</div>
+        <div class="mval"><span id="ps-waiting">—</span></div>
+        <div class="mdelta">status = waiting</div>
+      </div>
+      <div class="metric-card" data-ac="g">
+        <div class="mlabel">Avg Wait Time</div>
+        <div class="mval"><span id="ps-wait">—</span><span class="u">min</span></div>
+        <div class="mdelta">all severities</div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">Avg Patient Age</div>
+        <div class="mval"><span id="ps-age">—</span><span class="u">yrs</span></div>
+        <div class="mdelta">bimodal distribution</div>
+      </div>
+    </section>
+
+    <div class="g3">
+      <!-- Severity breakdown -->
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">🚨 Triage Severity</div><div class="panel-sub">1=critical · 5=minor</div></div></div>
+        <div class="sev-bars" id="sev-bars">
+          <div class="sev-row"><span class="sev-label">SEV 1 ●</span><div class="sev-bar-wrap"><div class="sev-bar sev1" id="sev-b1" style="width:0%">Critical</div></div><span class="sev-count" id="sev-c1">—</span></div>
+          <div class="sev-row"><span class="sev-label">SEV 2 ●</span><div class="sev-bar-wrap"><div class="sev-bar sev2" id="sev-b2" style="width:0%">High</div></div><span class="sev-count" id="sev-c2">—</span></div>
+          <div class="sev-row"><span class="sev-label">SEV 3 ●</span><div class="sev-bar-wrap"><div class="sev-bar sev3" id="sev-b3" style="width:0%">Moderate</div></div><span class="sev-count" id="sev-c3">—</span></div>
+          <div class="sev-row"><span class="sev-label">SEV 4 ●</span><div class="sev-bar-wrap"><div class="sev-bar sev4" id="sev-b4" style="width:0%">Low</div></div><span class="sev-count" id="sev-c4">—</span></div>
+          <div class="sev-row"><span class="sev-label">SEV 5 ●</span><div class="sev-bar-wrap"><div class="sev-bar sev5" id="sev-b5" style="width:0%">Minor</div></div><span class="sev-count" id="sev-c5">—</span></div>
         </div>
       </div>
-      <div class="gauge-wrap">
-        <div class="gauge-value"><span id="gauge-val">—</span><span class="unit">conn/pod</span></div>
-        <div class="gauge-bar"><div class="gauge-fill" id="gauge-fill" style="width: 0%"></div></div>
-        <div class="gauge-scale">
-          <span>0</span>
-          <span>TARGET 20</span>
-          <span>40+</span>
+
+      <!-- Status donut -->
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">📊 Patient Status</div><div class="panel-sub">current distribution</div></div></div>
+        <div class="donut-wrap">
+          <canvas id="donut" width="140" height="140" style="width:140px;height:140px;flex-shrink:0;"></canvas>
+          <div class="donut-legend">
+            <div class="dl-row"><span class="dl-dot" style="background:#f59e0b"></span><span style="color:var(--dim)">Waiting</span><span class="dl-val" id="dl-wait">—</span></div>
+            <div class="dl-row"><span class="dl-dot" style="background:#06b6d4"></span><span style="color:var(--dim)">In Treatment</span><span class="dl-val" id="dl-treat">—</span></div>
+            <div class="dl-row"><span class="dl-dot" style="background:#10b981"></span><span style="color:var(--dim)">Discharged</span><span class="dl-val" id="dl-disc">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top complaints -->
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">📋 Top Chief Complaints</div><div class="panel-sub">by volume</div></div></div>
+        <div class="comp-list" id="comp-list">
+          <div style="color:var(--muted);font-size:.78rem;">Loading…</div>
         </div>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title">🎯 HPA Status Board</div>
-          <div class="panel-sub">scaling decisions in real time</div>
+    <!-- Hourly intake chart -->
+    <div class="g2e">
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">🕐 Hourly Intake Pattern</div><div class="panel-sub">avg arrivals by hour of day · last 30 days</div></div></div>
+        <canvas id="hourly-chart" height="180"></canvas>
+      </div>
+
+      <!-- Recent patients table -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <div><div class="panel-title">🧾 Recent Admissions</div><div class="panel-sub">last 15 patients</div></div>
+          <span class="live-tag">LIVE</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="pt-table">
+            <thead>
+              <tr>
+                <th>Patient</th><th>Age</th><th>Sev</th><th>Complaint</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="pt-tbody">
+              <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Loading…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
-      <div style="padding: 0.5rem 0; display: flex; flex-direction: column; gap: 0.8rem;">
-        <div class="hpa-row"><span>Current Replicas</span><span id="hpa-current" style="color: var(--cyan);">—</span></div>
-        <div class="hpa-row"><span>Desired Replicas</span><span id="hpa-desired" style="color: var(--purple);">—</span></div>
-        <div class="hpa-row"><span>Scaling Direction</span><span id="hpa-direction">STEADY</span></div>
-        <div class="hpa-row"><span>Custom Metric</span><span style="font-weight: 500; color: var(--text);">hospital_active_connections</span></div>
-        <div class="hpa-row"><span>Target Per Pod</span><span style="font-weight: 500; color: var(--text);">20 conn</span></div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       PAGE 3 — INFRASTRUCTURE
+       ============================================================ -->
+  <div class="page" id="pg-infra">
+
+    <div class="sec-head">
+      <h2>Infrastructure</h2>
+      <p>Kubernetes cluster state · Prometheus metrics · HPA scaling decisions</p>
+    </div>
+
+    <div class="g2e" style="margin-bottom:.85rem;">
+      <!-- Replica chart -->
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">📈 Replica Scaling History</div><div class="panel-sub">current vs desired · last 10 min</div></div></div>
+        <canvas id="replica-chart" height="200"></canvas>
+      </div>
+
+      <!-- HPA board -->
+      <div class="panel">
+        <div class="panel-hdr"><div><div class="panel-title">🎯 HPA Status Board</div><div class="panel-sub">real-time scaling decisions</div></div></div>
+        <div style="padding:.25rem 0; display:flex; flex-direction:column;">
+          <div class="hpa-row"><span>Current Replicas</span><span id="hpa-cur" style="color:var(--cyan)">—</span></div>
+          <div class="hpa-row"><span>Desired Replicas</span><span id="hpa-des" style="color:var(--purple)">—</span></div>
+          <div class="hpa-row"><span>Scaling Direction</span><span id="hpa-dir">STEADY</span></div>
+          <div class="hpa-row"><span>Min / Max Replicas</span><span style="color:var(--dim)">2 / 10</span></div>
+          <div class="hpa-row"><span>Custom Metric</span><span style="font-weight:500;color:var(--text);font-size:.72rem">hospital_active_connections</span></div>
+          <div class="hpa-row"><span>Scale Trigger</span><span style="color:var(--dim)">avg 20 conn/pod</span></div>
+          <div class="hpa-row"><span>CPU Trigger</span><span style="color:var(--dim)">50% utilization</span></div>
+        </div>
       </div>
     </div>
-  </section>
+
+    <!-- Connections history -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div><div class="panel-title">🔌 Active DB Connections · History</div><div class="panel-sub">last 10 min</div></div>
+        <span class="live-tag">LIVE</span>
+      </div>
+      <canvas id="conn-chart" height="160"></canvas>
+    </div>
+
+  </div>
 
   <footer>
-    KUBE-HEALTH · ER OPERATIONS CENTER ·
-    <span class="signature">DESIGNED BY CLAUDE OPUS 4.7</span>
+    KUBE-HEALTH · EMERGENCY ROOM OPERATIONS ·
+    <span class="sig">DESIGNED BY CLAUDE OPUS 4.7</span>
   </footer>
 
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script>
-  const REFRESH_MS = 3000;
-  const MAX_EVENTS = 40;
-  const MAX_PODS = 10;
+  const REFRESH = 5000;
 
-  /* ------------ Clock ------------ */
-  function updateClock() {
-    const d = new Date();
-    const pad = n => n.toString().padStart(2, '0');
-    const tzOffset = -d.getTimezoneOffset() / 60;
-    const tzStr = (tzOffset >= 0 ? '+' : '') + tzOffset;
-    document.getElementById('clock').textContent =
-      `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} UTC${tzStr}`;
-  }
-  setInterval(updateClock, 1000); updateClock();
+  /* ---- Clock ---- */
+  const clockEl = document.getElementById('clock');
+  setInterval(() => {
+    const d = new Date(), p = n => n.toString().padStart(2,'0');
+    clockEl.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }, 1000);
 
-  /* ------------ Pod grid ------------ */
-  const podGrid = document.getElementById('pod-grid');
-  for (let i = 0; i < MAX_PODS; i++) {
-    const pod = document.createElement('div');
-    pod.className = 'pod';
-    pod.dataset.idx = i;
-    podGrid.appendChild(pod);
-  }
-  let lastReplicas = null;
-  function renderPods(count) {
-    const pods = podGrid.children;
-    for (let i = 0; i < MAX_PODS; i++) {
-      const shouldBeActive = i < count;
-      const isActive = pods[i].classList.contains('active');
-      if (shouldBeActive && !isActive) {
-        pods[i].classList.add('active', 'pending');
-        setTimeout(() => pods[i].classList.remove('pending'), 600);
-      } else if (!shouldBeActive && isActive) {
-        pods[i].classList.remove('active');
-      }
-    }
-    if (lastReplicas !== null && lastReplicas !== count) {
-      pushEvent(
-        count > lastReplicas ? 'up' : 'down',
-        `HPA ${count > lastReplicas ? 'scaled UP' : 'scaled DOWN'}: ${lastReplicas} → ${count} replicas`
-      );
-    }
-    lastReplicas = count;
-  }
-
-  /* ------------ ECG ------------ */
-  const ecgPath = document.getElementById('ecg-main-path');
-  const ecgFillPath = document.getElementById('ecg-fill-path');
-  const ecgPulse = document.getElementById('ecg-pulse');
-  const ecgGrid = document.getElementById('ecg-grid');
-
-  (function drawGrid() {
-    const W = 800, H = 280;
-    let g = '';
-    for (let x = 0; x <= W; x += 40) g += `<line x1="${x}" y1="0" x2="${x}" y2="${H}"/>`;
-    for (let y = 0; y <= H; y += 35) g += `<line x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
-    ecgGrid.innerHTML = g;
-  })();
-
-  function renderEcg(series) {
-    if (!series || series.length === 0) {
-      ecgPath.setAttribute('d', '');
-      ecgFillPath.setAttribute('d', '');
-      return;
-    }
-    const W = 800, H = 280, pad = 8;
-    const values = series.map(p => p.value);
-    const max = Math.max(...values, 1);
-    const stepX = W / Math.max(series.length - 1, 1);
-
-    let d = '';
-    series.forEach((p, i) => {
-      const x = i * stepX;
-      const y = H - pad - (p.value / max) * (H - pad * 2);
-      d += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+  /* ---- Tabs ---- */
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('pg-' + tab.dataset.tab).classList.add('active');
     });
-    ecgPath.setAttribute('d', d);
-    ecgFillPath.setAttribute('d', d + ` L ${W} ${H} L 0 ${H} Z`);
+  });
 
-    const lastX = (series.length - 1) * stepX;
-    const lastY = H - pad - (values[values.length - 1] / max) * (H - pad * 2);
-    ecgPulse.setAttribute('cx', lastX);
-    ecgPulse.setAttribute('cy', lastY);
+  /* ---- Pod grid ---- */
+  const podGrid = document.getElementById('pod-grid');
+  for (let i = 0; i < 10; i++) { const p = document.createElement('div'); p.className = 'pod'; podGrid.appendChild(p); }
+  let lastPods = null;
+  function renderPods(n) {
+    [...podGrid.children].forEach((pod, i) => {
+      const on = i < n;
+      if (on && !pod.classList.contains('on')) { pod.classList.add('on','new'); setTimeout(()=>pod.classList.remove('new'),600); }
+      else if (!on && pod.classList.contains('on')) pod.classList.remove('on');
+    });
+    if (lastPods !== null && lastPods !== n) pushEvent(n > lastPods ? 'up' : 'down', `HPA scaled ${n > lastPods ? 'UP' : 'DOWN'}: ${lastPods} → ${n} replicas`);
+    lastPods = n;
   }
 
-  /* ------------ Chart.js replica history ------------ */
-  const replicaCtx = document.getElementById('chart-replicas').getContext('2d');
-  const replicaChart = new Chart(replicaCtx, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        { label: 'Current', data: [], borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.15)',
-          borderWidth: 2.5, pointRadius: 0, tension: 0.2, fill: true, stepped: 'before' },
-        { label: 'Desired', data: [], borderColor: '#a855f7', backgroundColor: 'transparent',
-          borderWidth: 2, borderDash: [5, 4], pointRadius: 0, tension: 0.2, fill: false, stepped: 'before' }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: false,
-      scales: {
-        x: { display: false },
-        y: {
-          beginAtZero: true, suggestedMax: 10,
-          grid: { color: 'rgba(148, 163, 184, 0.06)' },
-          ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
-        }
-      },
-      plugins: {
-        legend: {
-          display: true, position: 'top', align: 'end',
-          labels: { color: '#94a3b8', font: { size: 11, family: 'Inter' }, boxWidth: 10, boxHeight: 10, usePointStyle: true }
-        }
+  /* ---- ECG ---- */
+  (function() {
+    const W=800, H=260;
+    let g = '';
+    for (let x=0;x<=W;x+=40) g+=`<line class="ecg-grid-line" x1="${x}" y1="0" x2="${x}" y2="${H}"/>`;
+    for (let y=0;y<=H;y+=32) g+=`<line class="ecg-grid-line" x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
+    document.getElementById('ecg-g').innerHTML = g;
+  })();
+  function renderEcg(series) {
+    if (!series?.length) return;
+    const W=800,H=260,pad=8, vals=series.map(p=>p.value), max=Math.max(...vals,1), sx=W/Math.max(series.length-1,1);
+    let d='';
+    series.forEach((p,i)=>{ const x=i*sx, y=H-pad-(p.value/max)*(H-pad*2); d+=(i===0?`M ${x} ${y}`:`L ${x} ${y}`); });
+    document.getElementById('ecg-p').setAttribute('d',d);
+    document.getElementById('ecg-fp').setAttribute('d', d+` L ${W} ${H} L 0 ${H} Z`);
+    const lx=(series.length-1)*sx, ly=H-pad-(vals[vals.length-1]/max)*(H-pad*2);
+    document.getElementById('ecg-dot').setAttribute('cx',lx);
+    document.getElementById('ecg-dot').setAttribute('cy',ly);
+  }
+
+  /* ---- Charts ---- */
+  function makeChart(id, datasets, opts={}) {
+    return new Chart(document.getElementById(id).getContext('2d'), {
+      type:'line', data:{ labels:[], datasets },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false,
+        scales:{ x:{display:false}, y:{ beginAtZero:true, grid:{color:'rgba(148,163,184,.05)'}, ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:10}}, ...opts.y } },
+        plugins:{ legend:{ display:datasets.length>1, position:'top', align:'end', labels:{color:'#94a3b8',font:{size:10},boxWidth:8,boxHeight:8,usePointStyle:true} } }
       }
+    });
+  }
+
+  const replicaChart = makeChart('replica-chart', [
+    {label:'Current', data:[], borderColor:'#06b6d4', backgroundColor:'rgba(6,182,212,.12)', borderWidth:2.5, pointRadius:0, tension:.2, fill:true, stepped:'before'},
+    {label:'Desired', data:[], borderColor:'#a855f7', backgroundColor:'transparent', borderWidth:2, borderDash:[5,4], pointRadius:0, tension:.2, fill:false, stepped:'before'}
+  ], {y:{suggestedMax:10}});
+
+  const connChart = makeChart('conn-chart', [
+    {label:'Connections', data:[], borderColor:'#06b6d4', backgroundColor:'rgba(6,182,212,.1)', borderWidth:2, pointRadius:0, tension:.3, fill:true}
+  ]);
+
+  const hourlyChart = new Chart(document.getElementById('hourly-chart').getContext('2d'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ label:'Arrivals', data:[], backgroundColor:'rgba(6,182,212,.25)', borderColor:'#06b6d4', borderWidth:1.5, borderRadius:3 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:9}} },
+        y:{ beginAtZero:true, grid:{color:'rgba(148,163,184,.05)'}, ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:10}} }
+      },
+      plugins:{ legend:{display:false} }
     }
   });
 
-  /* ------------ Events ------------ */
-  const eventFeed = document.getElementById('event-feed');
-  const ICONS = {
-    up:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l5-5 5 5M7 7l5-5 5 5"/></svg>',
-    down: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l5 5 5-5M7 17l5 5 5-5"/></svg>',
-    warn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 22h20L12 2zM12 9v5M12 17h.01"/></svg>',
-    info: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
+  const donutChart = new Chart(document.getElementById('donut').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:['Waiting','In Treatment','Discharged'], datasets:[{ data:[0,0,0], backgroundColor:['#f59e0b','#06b6d4','#10b981'], borderColor:'rgba(10,14,31,.8)', borderWidth:3, hoverBorderWidth:3 }] },
+    options:{ responsive:false, animation:{duration:600}, plugins:{ legend:{display:false}, tooltip:{enabled:false} }, cutout:'70%' }
+  });
+
+  function updateChart(chart, labels, ...dataSets) {
+    chart.data.labels = labels;
+    dataSets.forEach((d,i) => chart.data.datasets[i].data = d);
+    chart.update('none');
+  }
+
+  /* ---- Events ---- */
+  const feed = document.getElementById('event-feed');
+  const SVG = {
+    up:  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l5-5 5 5M7 7l5-5 5 5"/></svg>',
+    down:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l5 5 5-5M7 17l5 5 5-5"/></svg>',
+    warn:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 22h20L12 2zM12 9v5M12 17h.01"/></svg>',
+    info:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
   };
+  let firstEvent = true;
   function pushEvent(type, msg) {
-    const now = new Date();
-    const pad = n => n.toString().padStart(2, '0');
-    const el = document.createElement('div');
-    el.className = 'event';
-    el.innerHTML = `
-      <div class="event-icon ${type}">${ICONS[type]}</div>
-      <div class="event-body">
-        <div class="event-msg">${msg}</div>
-        <div class="event-time">${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}</div>
-      </div>
-    `;
-    const ph = eventFeed.querySelector('.event .event-msg');
-    if (ph && ph.textContent.includes('Awaiting')) eventFeed.innerHTML = '';
-    eventFeed.insertBefore(el, eventFeed.firstChild);
-    while (eventFeed.children.length > MAX_EVENTS) eventFeed.removeChild(eventFeed.lastChild);
+    if (firstEvent) { feed.innerHTML=''; firstEvent=false; }
+    const d=new Date(), p=n=>n.toString().padStart(2,'0');
+    const el=document.createElement('div'); el.className='event';
+    el.innerHTML=`<div class="eicon ${type}">${SVG[type]}</div><div><div class="emsg">${msg}</div><div class="etime">${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}</div></div>`;
+    feed.insertBefore(el,feed.firstChild);
+    while(feed.children.length>40) feed.removeChild(feed.lastChild);
   }
 
-  /* ------------ Animated number ------------ */
-  function animateNumber(el, to, { decimals = 0, duration = 600 } = {}) {
-    const from = parseFloat(el.dataset.current || '0');
-    const start = performance.now();
-    el.dataset.current = to;
-    function tick(now) {
-      const p = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      const v = from + (to - from) * eased;
-      el.textContent = decimals > 0 ? v.toFixed(decimals) : Math.round(v).toLocaleString();
-      if (p < 1) requestAnimationFrame(tick);
+  /* ---- Tween counter ---- */
+  function tween(el, to, {dec=0,dur=600}={}) {
+    const from=parseFloat(el.dataset.v||'0'); el.dataset.v=to;
+    const t0=performance.now();
+    (function tick(now){ const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3), v=from+(to-from)*e;
+      el.textContent=dec>0?v.toFixed(dec):Math.round(v).toLocaleString(); if(p<1)requestAnimationFrame(tick); })(t0);
+  }
+
+  async function get(url) { const r=await fetch(url); if(!r.ok)throw new Error(url+' '+r.status); return r.json(); }
+
+  let prevRate=null, firstLoad=true;
+
+  /* ---- Prometheus refresh ---- */
+  async function refreshOps() {
+    const [metrics, hist, hpa] = await Promise.all([get('/api/metrics'),get('/api/metrics/history'),get('/api/hpa')]);
+
+    tween(document.getElementById('mc-conn'),   metrics.active_connections??0);
+    tween(document.getElementById('mc-rate'),   metrics.insert_rate_per_sec??0, {dec:1});
+    tween(document.getElementById('mc-threads'),metrics.simulator_active_threads??0);
+    tween(document.getElementById('mc-total'),  metrics.inserts_total??0);
+
+    const pill=document.getElementById('db-pill'), txt=document.getElementById('db-txt');
+    if(metrics.db_up){ pill.classList.remove('off'); txt.textContent='SYSTEMS NOMINAL'; }
+    else { pill.classList.add('off'); txt.textContent='DATABASE OFFLINE'; }
+
+    renderEcg(hist.insert_rate);
+
+    const cur = hpa.current_replicas.length ? hpa.current_replicas.at(-1).value : 2;
+    const des = hpa.desired_replicas.length  ? hpa.desired_replicas.at(-1).value : cur;
+    document.getElementById('pod-n').textContent = cur;
+    renderPods(cur);
+
+    document.getElementById('hpa-cur').textContent = cur;
+    document.getElementById('hpa-des').textContent = des;
+    const dir=document.getElementById('hpa-dir');
+    if(des>cur){dir.textContent='↑ SCALING UP';dir.style.color='var(--green)'}
+    else if(des<cur){dir.textContent='↓ SCALING DOWN';dir.style.color='var(--purple)'}
+    else{dir.textContent='→ STEADY';dir.style.color='var(--dim)'}
+
+    const cpp=cur>0?(metrics.active_connections||0)/cur:0;
+    document.getElementById('gauge-v').textContent=cpp.toFixed(1);
+    document.getElementById('gauge-f').style.width=Math.min(100,(cpp/40)*100)+'%';
+
+    const lbl=t=>new Date(t*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    updateChart(replicaChart, hpa.current_replicas.map(p=>lbl(p.ts)), hpa.current_replicas.map(p=>p.value), hpa.desired_replicas.map(p=>p.value));
+    updateChart(connChart, hist.active_connections.map(p=>lbl(p.ts)), hist.active_connections.map(p=>p.value));
+
+    if(prevRate!=null&&metrics.insert_rate_per_sec>prevRate*3&&metrics.insert_rate_per_sec>50)
+      pushEvent('warn',`Traffic spike: ${metrics.insert_rate_per_sec.toFixed(0)} inserts/sec`);
+    prevRate=metrics.insert_rate_per_sec;
+    if(firstLoad){ pushEvent('info',`Dashboard online · ${cur} replicas active`); firstLoad=false; }
+  }
+
+  /* ---- Patient analytics refresh ---- */
+  async function refreshPatients() {
+    const [stats, sev, hourly, complaints, recent] = await Promise.all([
+      get('/api/patients/stats'), get('/api/patients/severity'),
+      get('/api/patients/hourly'), get('/api/patients/complaints'),
+      get('/api/patients/recent'),
+    ]);
+
+    tween(document.getElementById('ps-total'),  stats.total??0);
+    tween(document.getElementById('ps-waiting'), stats.waiting??0);
+    tween(document.getElementById('ps-wait'),   stats.avg_wait_minutes??0);
+    tween(document.getElementById('ps-age'),    stats.avg_age??0);
+
+    document.getElementById('dl-wait').textContent  = (stats.waiting??0).toLocaleString();
+    document.getElementById('dl-treat').textContent = (stats.in_treatment??0).toLocaleString();
+    document.getElementById('dl-disc').textContent  = (stats.discharged??0).toLocaleString();
+    donutChart.data.datasets[0].data = [stats.waiting||0, stats.in_treatment||0, stats.discharged||0];
+    donutChart.update();
+
+    // Severity bars
+    const sevMap={}; sev.forEach(r=>sevMap[r.severity]=parseInt(r.count));
+    const sevMax=Math.max(...Object.values(sevMap),1);
+    for(let i=1;i<=5;i++){
+      const c=sevMap[i]||0;
+      document.getElementById(`sev-b${i}`).style.width=Math.max(3,(c/sevMax)*100)+'%';
+      document.getElementById(`sev-c${i}`).textContent=c.toLocaleString();
     }
-    requestAnimationFrame(tick);
-  }
 
-  async function fetchJSON(path) {
-    const r = await fetch(path);
-    if (!r.ok) throw new Error(`${path} ${r.status}`);
-    return r.json();
-  }
+    // Hourly chart — fill all 24 hours
+    const hmap={}; hourly.forEach(r=>hmap[r.hour]=parseInt(r.count));
+    const hours=Array.from({length:24},(_,i)=>i);
+    updateChart(hourlyChart, hours.map(h=>h+':00'), hours.map(h=>hmap[h]||0));
 
-  let prevInsertRate = null;
-  let firstLoad = true;
+    // Complaints
+    const cl=document.getElementById('comp-list'); cl.innerHTML='';
+    const maxC=complaints[0]?.count||1;
+    complaints.forEach(c=>{
+      cl.innerHTML+=`<div class="comp-row">
+        <span class="comp-name">${c.chief_complaint}</span>
+        <div class="comp-bar-wrap"><div class="comp-bar" style="width:${(c.count/maxC)*100}%"></div></div>
+        <span class="comp-count">${parseInt(c.count).toLocaleString()}</span>
+      </div>`;
+    });
+
+    // Recent patients
+    const SEV_LABELS={1:'CRITICAL',2:'HIGH',3:'MOD',4:'LOW',5:'MINOR'};
+    const STATUS_CLS={waiting:'st-wait',in_treatment:'st-treat',discharged:'st-disc'};
+    const tb=document.getElementById('pt-tbody'); tb.innerHTML='';
+    recent.forEach(p=>{
+      tb.innerHTML+=`<tr>
+        <td>${p.patient_name}</td>
+        <td>${p.age??'—'}</td>
+        <td><span class="sev-badge s${p.severity}">${SEV_LABELS[p.severity]}</span></td>
+        <td style="color:var(--dim)">${p.chief_complaint??'—'}</td>
+        <td><span class="st-pill ${STATUS_CLS[p.status]||''}">${p.status}</span></td>
+      </tr>`;
+    });
+  }
 
   async function refresh() {
-    const err = document.getElementById('error-banner');
+    const errEl=document.getElementById('err');
     try {
-      const [metrics, history, hpa] = await Promise.all([
-        fetchJSON('/api/metrics'),
-        fetchJSON('/api/metrics/history'),
-        fetchJSON('/api/hpa'),
-      ]);
-
-      animateNumber(document.getElementById('stat-connections'), metrics.active_connections ?? 0);
-      animateNumber(document.getElementById('stat-rate'), metrics.insert_rate_per_sec ?? 0, { decimals: 1 });
-      animateNumber(document.getElementById('stat-threads'), metrics.simulator_active_threads ?? 0);
-      animateNumber(document.getElementById('stat-total'), metrics.inserts_total ?? 0);
-
-      const badge = document.getElementById('db-badge');
-      const badgeText = document.getElementById('db-badge-text');
-      if (metrics.db_up) {
-        badge.classList.remove('offline');
-        badgeText.textContent = 'SYSTEMS NOMINAL';
-      } else {
-        badge.classList.add('offline');
-        badgeText.textContent = 'DATABASE OFFLINE';
-      }
-
-      renderEcg(history.insert_rate);
-
-      const currentReplicas = hpa.current_replicas.length > 0
-        ? hpa.current_replicas[hpa.current_replicas.length - 1].value : 2;
-      const desiredReplicas = hpa.desired_replicas.length > 0
-        ? hpa.desired_replicas[hpa.desired_replicas.length - 1].value : currentReplicas;
-
-      document.getElementById('pod-current').textContent = currentReplicas;
-      renderPods(currentReplicas);
-
-      document.getElementById('hpa-current').textContent = currentReplicas;
-      document.getElementById('hpa-desired').textContent = desiredReplicas;
-      const direction = document.getElementById('hpa-direction');
-      if (desiredReplicas > currentReplicas) {
-        direction.textContent = '↑ SCALING UP'; direction.style.color = 'var(--green)';
-      } else if (desiredReplicas < currentReplicas) {
-        direction.textContent = '↓ SCALING DOWN'; direction.style.color = 'var(--purple)';
-      } else {
-        direction.textContent = '→ STEADY'; direction.style.color = 'var(--text-dim)';
-      }
-
-      const connPerPod = currentReplicas > 0 ? (metrics.active_connections || 0) / currentReplicas : 0;
-      document.getElementById('gauge-val').textContent = connPerPod.toFixed(1);
-      document.getElementById('gauge-fill').style.width = Math.min(100, (connPerPod / 40) * 100) + '%';
-
-      replicaChart.data.labels = hpa.current_replicas.map(p => {
-        const d = new Date(p.ts * 1000);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      });
-      replicaChart.data.datasets[0].data = hpa.current_replicas.map(p => p.value);
-      replicaChart.data.datasets[1].data = hpa.desired_replicas.map(p => p.value);
-      replicaChart.update('none');
-
-      if (prevInsertRate != null && metrics.insert_rate_per_sec != null) {
-        if (metrics.insert_rate_per_sec > prevInsertRate * 3 && metrics.insert_rate_per_sec > 50) {
-          pushEvent('warn', `Traffic spike: ${metrics.insert_rate_per_sec.toFixed(0)} inserts/sec`);
-        }
-      }
-      prevInsertRate = metrics.insert_rate_per_sec;
-
-      if (firstLoad) {
-        pushEvent('info', `Dashboard online · ${currentReplicas} replicas active`);
-        firstLoad = false;
-      }
-
-      err.style.display = 'none';
-    } catch (e) {
-      err.textContent = '⚠ ' + e.message;
-      err.style.display = 'block';
+      await Promise.all([refreshOps(), refreshPatients()]);
+      errEl.style.display='none';
+    } catch(e) {
+      errEl.textContent='⚠ '+e.message; errEl.style.display='block';
     }
   }
 
   refresh();
-  setInterval(refresh, REFRESH_MS);
+  setInterval(refresh, REFRESH);
 </script>
 </body>
 </html>
