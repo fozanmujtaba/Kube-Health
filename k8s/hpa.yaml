@@ -10,7 +10,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: postgres
-  minReplicas: 2 # Base level of redundancy during normal state
+  minReplicas: 1 # Single postgres pod (RWO PVC — cannot share across pods)
   maxReplicas: 10 # Cap out at 10 to simulate massive scale during an ER rush
   metrics:
   # Metric 1: Native CPU Utilization

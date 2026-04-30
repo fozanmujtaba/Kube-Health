@@ -8,8 +8,8 @@ env/
 
 # Environment files
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # Build outputs
 build/
@@ -27,12 +27,17 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Docker
+# Logs
 *.log
+logs/
 
-# Kubernetes secrets (keep the template, not actual secrets)
-# postgres-secret.yaml is tracked since it uses demo credentials only
+# Kubernetes secrets & sensitive configs
+k8s/postgres-secret.yaml
+
+# Claude Code internal data
+.claude/
 
 # Misc
 *.bak
 *.tmp
+*.docx

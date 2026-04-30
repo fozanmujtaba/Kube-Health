@@ -30,8 +30,9 @@ metadata:
     app: kube-health
     component: database
 spec:
-  # Starting replica count — HPA will manage this after it's deployed.
-  replicas: 2
+  # 1 replica — PostgreSQL cannot safely share a single PVC across pods.
+  # The HPA scales this pod's CPU/connections but replica count stays 1.
+  replicas: 1
 
   # The selector must match the pod template labels exactly.
   selector:
