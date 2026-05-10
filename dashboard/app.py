@@ -178,22 +178,21 @@ def _init_db():
                         chief_complaint  TEXT,
                         wait_time_minutes INT,
                         discharge_time   TIMESTAMP
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_er_patients_arrival
-                        ON er_patients (arrival_time DESC);
-                    CREATE INDEX IF NOT EXISTS idx_er_patients_severity
-                        ON er_patients (severity);
+                    )
                 """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_er_patients_arrival ON er_patients (arrival_time DESC)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_er_patients_severity ON er_patients (severity)")
                 conn.commit()
                 cur.execute("SELECT COUNT(*) FROM er_patients")
                 count = cur.fetchone()[0]
+        print(f"DB ready — {count} existing rows.")
         if count < 100:
             print("Seeding database…")
             _seed_patients(3000)
         else:
-            print(f"DB already has {count} rows, skipping seed.")
+            print(f"Skipping seed, {count} rows already present.")
     except Exception as e:
-        print(f"DB init error (will retry on first request): {e}")
+        print(f"DB init error: {e}")
 
 # ---------------------------------------------------------------------------
 # App lifespan
