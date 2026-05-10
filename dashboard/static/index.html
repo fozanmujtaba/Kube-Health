@@ -780,18 +780,29 @@
     });
   }
 
-  async function refresh() {
-    const errEl=document.getElementById('err');
+  const errEl = document.getElementById('err');
+
+  async function safeRefreshOps() {
     try {
-      await Promise.all([refreshOps(), refreshPatients()]);
-      errEl.style.display='none';
+      await refreshOps();
+      errEl.style.display = 'none';
     } catch(e) {
-      errEl.textContent='⚠ '+e.message; errEl.style.display='block';
+      errEl.textContent = '⚠ Prometheus: ' + e.message;
+      errEl.style.display = 'block';
     }
   }
 
-  refresh();
-  setInterval(refresh, REFRESH);
+  async function safeRefreshPatients() {
+    try { await refreshPatients(); } catch(e) { console.warn('Patient refresh error:', e.message); }
+  }
+
+  // Fast loop: Prometheus metrics every 5s
+  safeRefreshOps();
+  setInterval(safeRefreshOps, 5000);
+
+  // Slow loop: DB patient analytics every 30s (queries are expensive)
+  safeRefreshPatients();
+  setInterval(safeRefreshPatients, 30000);
 </script>
 </body>
 </html>

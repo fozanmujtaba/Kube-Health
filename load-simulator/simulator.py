@@ -22,168 +22,181 @@ COMPLAINTS = {
 WAIT_RANGES = {1: (0, 5), 2: (5, 20), 3: (20, 60), 4: (60, 150), 5: (120, 300)}
 GENDERS = ["M", "F", "F", "M", "F", "M", "Other"]
 
+
 class SimState:
-    """Holds shared state for the worker threads so rate can be dynamically adjusted."""
     def __init__(self, inserts_per_sec):
         self.inserts_per_sec = inserts_per_sec
 
+
 def get_db_connection():
-    """
-    Establish and return a connection to the PostgreSQL database.
-    Fallback to 'localhost' if environment variables are missing, which is useful for local testing.
-    """
     host = os.environ.get('DB_HOST', 'localhost')
     port = os.environ.get('DB_PORT', '5432')
     user = os.environ.get('DB_USER', 'hospital_admin')
     password = os.environ.get('DB_PASSWORD', 'er_secure_pass')
     dbname = os.environ.get('DB_NAME', 'hospital_db')
-
     try:
         conn = psycopg2.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            dbname=dbname
+            host=host, port=port, user=user,
+            password=password, dbname=dbname, connect_timeout=5
         )
         return conn
     except Exception as e:
-        print(f"Error connecting to DB: {e}")
+        print(f"DB connect error: {e}")
         return None
 
-def worker(stop_event, state):
-    """
-    A single worker thread that continuously inserts ER patients into the DB.
-    simulating incoming patient registration at the ER.
-    """
-    conn = get_db_connection()
-    if not conn:
-        return
 
+def worker(stop_event, state):
     metrics_active_threads.inc()
     try:
-        with conn.cursor() as cur:
-            while not stop_event.is_set():
-                inserts_this_second = state.inserts_per_sec
-                if inserts_this_second > 0:
-                    for _ in range(inserts_this_second):
-                        # Randomize patient data
-                        patient_name = fake.name()
-                        severity = random.randint(1, 5)
-
-                        # Insert a new patient into er_patients
-                        age = random.choices(
-                            range(18, 91),
-                            weights=[2 if a < 40 or a > 65 else 1 for a in range(18, 91)]
-                        )[0]
-                        wait_min = random.randint(*WAIT_RANGES[severity])
-                        cur.execute(
-                            """INSERT INTO er_patients
-                               (patient_name, arrival_time, severity, status,
-                                age, gender, chief_complaint, wait_time_minutes)
-                               VALUES (%s, NOW(), %s, 'waiting', %s, %s, %s, %s)""",
-                            (patient_name, severity, age,
-                             random.choice(GENDERS),
-                             random.choice(COMPLAINTS[severity]),
-                             wait_min)
-                        )
-                        metrics_inserts_total.inc()
-
-                    # Commit the batch
-                    conn.commit()
-
-                # Sleep to maintain the target rate (roughly 1 second per loop)
-                time.sleep(1.0)
-    except Exception as e:
-        print(f"Thread error: {e}")
+        while not stop_event.is_set():
+            conn = get_db_connection()
+            if not conn:
+                time.sleep(3)
+                continue
+            try:
+                with conn.cursor() as cur:
+                    while not stop_event.is_set():
+                        inserts_this_second = state.inserts_per_sec
+                        if inserts_this_second > 0:
+                            for _ in range(inserts_this_second):
+                                severity = random.randint(1, 5)
+                                age = random.choices(
+                                    range(18, 91),
+                                    weights=[2 if a < 40 or a > 65 else 1 for a in range(18, 91)]
+                                )[0]
+                                wait_min = random.randint(*WAIT_RANGES[severity])
+                                cur.execute(
+                                    """INSERT INTO er_patients
+                                       (patient_name, arrival_time, severity, status,
+                                        age, gender, chief_complaint, wait_time_minutes)
+                                       VALUES (%s, NOW(), %s, 'waiting', %s, %s, %s, %s)""",
+                                    (fake.name(), severity, age,
+                                     random.choice(GENDERS),
+                                     random.choice(COMPLAINTS[severity]),
+                                     wait_min)
+                                )
+                                metrics_inserts_total.inc()
+                            conn.commit()
+                        time.sleep(1.0)
+            except Exception as e:
+                print(f"Thread DB error (will reconnect): {e}")
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
     finally:
         metrics_active_threads.dec()
-        if conn:
-            conn.close()
+
+
+def spawn_threads(n, state):
+    stop_events = []
+    threads = []
+    for _ in range(n):
+        ev = threading.Event()
+        t = threading.Thread(target=worker, args=(ev, state), daemon=True)
+        stop_events.append(ev)
+        threads.append(t)
+        t.start()
+    return threads, stop_events
+
+
+def stop_n_threads(stop_events, n):
+    stopped = 0
+    for ev in stop_events:
+        if stopped >= n:
+            break
+        if not ev.is_set():
+            ev.set()
+            stopped += 1
+
 
 def run_simulation(mode):
-    """
-    Manages the simulation state based on the selected mode: normal, spike, or cooldown.
-    """
     start_time = time.time()
-    threads = []
-    stop_events = []
 
-    # Initialize constraints based on mode
     if mode == 'normal':
-        target_threads = 5
         state = SimState(1)
-        print("Starting NORMAL mode: 5 threads, 1 insert/sec each.")
-    elif mode == 'spike':
-        target_threads = 50
-        state = SimState(10)
-        print("Starting SPIKE mode: 50 threads, 10 inserts/sec each.")
-    elif mode == 'cooldown':
-        target_threads = 50 # Start at 50 to simulate the exact peak before dropping
-        state = SimState(10)
-        print("Starting COOLDOWN mode: 50 threads descending back to 5 over 60 seconds.")
-    else:
-        print("Invalid mode.")
-        return
-
-    # Start initial batch of threads
-    for _ in range(target_threads):
-        ev = threading.Event()
-        t = threading.Thread(target=worker, args=(ev, state))
-        t.daemon = True
-        threads.append(t)
-        stop_events.append(ev)
-        t.start()
-
-    try:
+        threads, stop_events = spawn_threads(5, state)
+        print("NORMAL mode: 5 threads × 1 insert/sec")
         while True:
             elapsed = time.time() - start_time
             active = sum(1 for t in threads if t.is_alive())
-
-            # Print current stats to stdout
-            total_rate = active * state.inserts_per_sec
-            print(f"Elapsed: {elapsed:.1f}s | Active Threads: {active} | Inserts/sec: {total_rate}")
-
-            # Cooldown dynamic scaling logic
-            if mode == 'cooldown':
-                if elapsed <= 60:
-                    # Linearly reduce threads from 50 to 5 over 60 seconds
-                    progress = elapsed / 60.0
-                    desired_threads = max(5, int(50 - (45 * progress)))
-
-                    # Signal extra threads to stop
-                    while active > desired_threads:
-                        for ev in stop_events:
-                            if not ev.is_set():
-                                ev.set()
-                                active -= 1
-                                break
-
-                    # Smoothly reduce inserts/sec for remaining threads down to 1
-                    state.inserts_per_sec = max(1, int(10 - (9 * progress)))
-                else:
-                    # After 60 seconds, lock into normal baseline behavior
-                    state.inserts_per_sec = 1
-
+            print(f"Elapsed: {elapsed:.1f}s | Active Threads: {active} | Inserts/sec: {active * state.inserts_per_sec}")
             time.sleep(2)
 
-    except KeyboardInterrupt:
-        print("\nStopping simulation threads...")
-        for ev in stop_events:
-            ev.set()
-        print("Simulation stopped gracefully.")
+    elif mode == 'spike':
+        state = SimState(10)
+        threads, stop_events = spawn_threads(50, state)
+        print("SPIKE mode: 50 threads × 10 inserts/sec")
+        while True:
+            elapsed = time.time() - start_time
+            active = sum(1 for t in threads if t.is_alive())
+            print(f"Elapsed: {elapsed:.1f}s | Active Threads: {active} | Inserts/sec: {active * state.inserts_per_sec}")
+            time.sleep(2)
+
+    elif mode == 'cooldown':
+        state = SimState(10)
+        threads, stop_events = spawn_threads(50, state)
+        print("COOLDOWN mode: ramp down from 50 → 5 threads over 60s")
+        while True:
+            elapsed = time.time() - start_time
+            active = sum(1 for t in threads if t.is_alive())
+            if elapsed <= 60:
+                progress = elapsed / 60.0
+                desired = max(5, int(50 - 45 * progress))
+                if active > desired:
+                    stop_n_threads(stop_events, active - desired)
+                state.inserts_per_sec = max(1, int(10 - 9 * progress))
+            else:
+                state.inserts_per_sec = 1
+            print(f"Elapsed: {elapsed:.1f}s | Active Threads: {active} | Inserts/sec: {active * state.inserts_per_sec}")
+            time.sleep(2)
+
+    elif mode == 'cycle':
+        # Continuously loops: normal (90s) → spike (90s) → cooldown (60s) → repeat
+        print("CYCLE mode: normal → spike → cooldown → repeat")
+        phases = [
+            ('normal',   90,  5, SimState(1)),
+            ('spike',    90, 50, SimState(10)),
+            ('cooldown', 60, 50, SimState(10)),
+        ]
+        while True:
+            for phase_name, duration, n_threads, state in phases:
+                print(f"\n=== Phase: {phase_name.upper()} ({duration}s) ===")
+                threads, stop_events = spawn_threads(n_threads, state)
+                phase_start = time.time()
+
+                while time.time() - phase_start < duration:
+                    elapsed_phase = time.time() - phase_start
+                    active = sum(1 for t in threads if t.is_alive())
+
+                    if phase_name == 'cooldown':
+                        progress = min(1.0, elapsed_phase / duration)
+                        desired = max(5, int(n_threads - (n_threads - 5) * progress))
+                        if active > desired:
+                            stop_n_threads(stop_events, active - desired)
+                        state.inserts_per_sec = max(1, int(10 - 9 * progress))
+
+                    print(f"[{phase_name}] {elapsed_phase:.0f}s | Threads: {active} | Inserts/sec: {active * state.inserts_per_sec}")
+                    time.sleep(2)
+
+                # Stop all threads from this phase before next phase
+                for ev in stop_events:
+                    ev.set()
+                for t in threads:
+                    t.join(timeout=3)
+    else:
+        print("Invalid mode.")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="ER Traffic Load Simulator")
-    parser.add_argument('--mode', choices=['normal', 'spike', 'cooldown'], default='normal',
-                        help="Mode of the simulation: normal, spike, or cooldown")
+    parser.add_argument('--mode', choices=['normal', 'spike', 'cooldown', 'cycle'], default='cycle',
+                        help="Simulation mode (default: cycle)")
     parser.add_argument('--port', type=int, default=8080,
-                        help="Port to expose Prometheus metrics")
+                        help="Port for Prometheus metrics")
     args = parser.parse_args()
 
-    # Start Prometheus metrics server in a background daemon thread
     print(f"Starting simulator metrics server on port {args.port}")
     start_http_server(args.port)
-
-    # Run the main simulation loop
     run_simulation(args.mode)

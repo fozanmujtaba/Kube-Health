@@ -20,4 +20,5 @@ COPY simulator.py .
 EXPOSE 8080
 
 # Default entrypoint runs the simulator
-ENTRYPOINT ["python", "simulator.py"]
+ENV PYTHONUNBUFFERED=1
+ENTRYPOINT ["python", "-u", "simulator.py"]

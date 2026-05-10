@@ -39,7 +39,7 @@ spec:
 
           args:
             - "--mode"
-            - "normal"
+            - "cycle"
             - "--port"
             - "8080"
 
