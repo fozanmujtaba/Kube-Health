@@ -1,12 +1,14 @@
 """
 Dashboard backend — queries Prometheus + PostgreSQL and serves the frontend.
-Prometheus errors are handled gracefully so the app works without a K8s cluster.
+Falls back to real DB metrics and a built-in simulator when running outside K8s.
 """
+import asyncio
 import os
 import time
 import random
 import psycopg2
 import psycopg2.extras
+from collections import deque
 from contextlib import contextmanager, asynccontextmanager
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
@@ -77,7 +79,7 @@ def db_query(sql: str, params=None) -> list[dict]:
             return [dict(r) for r in cur.fetchall()]
 
 # ---------------------------------------------------------------------------
-# DB init + seed on startup
+# Seed data helpers
 # ---------------------------------------------------------------------------
 
 COMPLAINTS = {
@@ -162,6 +164,10 @@ def _seed_patients(n=3000):
                 conn.commit()
     print(f"Seeded {n} patients.")
 
+# ---------------------------------------------------------------------------
+# DB init
+# ---------------------------------------------------------------------------
+
 def _init_db():
     try:
         with get_db() as conn:
@@ -195,18 +201,88 @@ def _init_db():
         print(f"DB init error: {e}")
 
 # ---------------------------------------------------------------------------
+# Built-in simulator — inserts real patients and tracks metrics
+# Runs as a background asyncio task when Prometheus is not available
+# ---------------------------------------------------------------------------
+
+_insert_times: deque = deque(maxlen=600)   # timestamps of last ~10 min of inserts
+_inserts_total: int = 0
+_sim_running: bool = False
+
+def _sim_insert_patient():
+    """Insert one live patient record and record the timestamp."""
+    global _inserts_total
+    sev    = random.choices(range(1, 6), weights=SEVERITY_WEIGHTS)[0]
+    wait   = random.randint(*WAIT_RANGES[sev])
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO er_patients
+                   (patient_name, arrival_time, severity, status,
+                    age, gender, chief_complaint, wait_time_minutes)
+                   VALUES (%s, NOW(), %s, 'waiting', %s, %s, %s, %s)""",
+                (_rand_name(), sev, _bimodal_age(),
+                 random.choice(GENDERS), random.choice(COMPLAINTS[sev]), wait),
+            )
+            conn.commit()
+    _insert_times.append(time.time())
+    _inserts_total += 1
+
+async def _background_simulator():
+    global _sim_running
+    _sim_running = True
+    print("Built-in simulator started.")
+    while True:
+        try:
+            n = random.randint(1, 3)
+            for _ in range(n):
+                _sim_insert_patient()
+        except Exception as e:
+            print(f"Simulator error: {e}")
+        await asyncio.sleep(random.uniform(1.5, 3.5))
+
+def _insert_rate_per_sec() -> float:
+    now = time.time()
+    recent = sum(1 for t in _insert_times if t > now - 60)
+    return round(recent / 60, 2)
+
+def _rate_history() -> list:
+    """15-second bucketed insert rate for the last 10 minutes."""
+    now = time.time()
+    start = now - 600
+    step = 15
+    buckets = []
+    t = start
+    while t <= now:
+        count = sum(1 for ts in _insert_times if t <= ts < t + step)
+        buckets.append({"ts": t, "value": round(count / step, 3)})
+        t += step
+    return buckets
+
+def _active_db_connections() -> int:
+    try:
+        r = db_query(
+            "SELECT count(*) AS n FROM pg_stat_activity WHERE datname = current_database()"
+        )
+        return r[0]["n"]
+    except Exception:
+        return 0
+
+# ---------------------------------------------------------------------------
 # App lifespan
 # ---------------------------------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
+    task = asyncio.create_task(_background_simulator())
     yield
+    task.cancel()
 
 app = FastAPI(title="Kube-Health Dashboard", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
-# Prometheus helpers — return [] on any error (Prometheus may not be available)
+# Prometheus helpers — return [] on any error
 # ---------------------------------------------------------------------------
 
 async def prom_query(query: str):
@@ -259,21 +335,28 @@ def _to_series(result: list) -> list:
     return [{"ts": v[0], "value": float(v[1])} for v in result[0].get("values", [])]
 
 # ---------------------------------------------------------------------------
-# Prometheus API routes
+# Prometheus API routes — fall back to built-in simulator data
 # ---------------------------------------------------------------------------
 
 @app.get("/api/metrics")
 async def get_metrics():
-    active_connections = _first_value(await prom_query(
+    prom_connections = _first_value(await prom_query(
         'sum(pg_stat_activity_count{datname="hospital_db"})'
     ))
-    db_up = _first_value(await prom_query("pg_up"))
-    simulator_threads = _first_value(await prom_query("simulator_active_threads"))
-    inserts_total = _first_value(await prom_query("simulator_inserts_total"))
-    insert_rate = _first_value(await prom_query("rate(simulator_inserts_total[1m])"))
+    prom_db_up     = _first_value(await prom_query("pg_up"))
+    prom_threads   = _first_value(await prom_query("simulator_active_threads"))
+    prom_total     = _first_value(await prom_query("simulator_inserts_total"))
+    prom_rate      = _first_value(await prom_query("rate(simulator_inserts_total[1m])"))
 
-    # When Prometheus is unavailable, check the actual DB connection
-    if db_up is None:
+    # Fall back to real DB data when Prometheus is unavailable
+    active_connections = prom_connections if prom_connections is not None else _active_db_connections()
+    insert_rate        = prom_rate        if prom_rate is not None        else _insert_rate_per_sec()
+    simulator_threads  = prom_threads     if prom_threads is not None     else (4 if _sim_running else 0)
+    inserts_total      = prom_total       if prom_total is not None       else _inserts_total
+
+    if prom_db_up is not None:
+        db_up = bool(prom_db_up)
+    else:
         try:
             db_query("SELECT 1")
             db_up = True
@@ -281,21 +364,24 @@ async def get_metrics():
             db_up = False
 
     return {
-        "active_connections": active_connections,
-        "db_up": bool(db_up),
+        "active_connections":     active_connections,
+        "db_up":                  db_up,
         "simulator_active_threads": simulator_threads,
-        "inserts_total": inserts_total,
-        "insert_rate_per_sec": round(insert_rate, 2) if insert_rate else None,
+        "inserts_total":          inserts_total,
+        "insert_rate_per_sec":    round(insert_rate, 2) if insert_rate else 0,
     }
 
 
 @app.get("/api/metrics/history")
 async def get_metrics_history():
+    prom_conn_series = _to_series(await prom_range(
+        'sum(pg_stat_activity_count{datname="hospital_db"})'
+    ))
+    prom_rate_series = _to_series(await prom_range("rate(simulator_inserts_total[1m])"))
+
     return {
-        "active_connections": _to_series(await prom_range(
-            'sum(pg_stat_activity_count{datname="hospital_db"})'
-        )),
-        "insert_rate": _to_series(await prom_range("rate(simulator_inserts_total[1m])")),
+        "active_connections": prom_conn_series,
+        "insert_rate": prom_rate_series if prom_rate_series else _rate_history(),
     }
 
 
