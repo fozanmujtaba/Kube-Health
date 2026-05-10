@@ -29,7 +29,7 @@ if _db_url:
         password=_p.password,
         dbname=_p.path.lstrip("/"),
         connect_timeout=10,
-        sslmode="require",
+        sslmode="prefer",
     )
 else:
     DB_CONFIG = dict(
