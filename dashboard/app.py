@@ -273,9 +273,17 @@ async def get_metrics():
     inserts_total = _first_value(await prom_query("simulator_inserts_total"))
     insert_rate = _first_value(await prom_query("rate(simulator_inserts_total[1m])"))
 
+    # When Prometheus is unavailable, check the actual DB connection
+    if db_up is None:
+        try:
+            db_query("SELECT 1")
+            db_up = True
+        except Exception:
+            db_up = False
+
     return {
         "active_connections": active_connections,
-        "db_up": bool(db_up) if db_up is not None else None,
+        "db_up": bool(db_up),
         "simulator_active_threads": simulator_threads,
         "inserts_total": inserts_total,
         "insert_rate_per_sec": round(insert_rate, 2) if insert_rate else None,
